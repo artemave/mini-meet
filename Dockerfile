@@ -11,9 +11,6 @@ COPY public ./public
 COPY README.md AGENTS.md ./
 
 ENV NODE_ENV=production
-ENV PORT=3000
-EXPOSE 3000
 
 # Start the server (Dokku sets PORT at runtime)
 CMD ["node", "src/server.js"]
-
