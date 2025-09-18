@@ -1,0 +1,16 @@
+{
+  "name": "webrtc-mini-meet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Very basic WebRTC 1:1 video chat with unique meeting URLs",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
+
