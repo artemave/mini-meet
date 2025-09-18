@@ -4,28 +4,103 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Mini Meet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              brand: '#22c55e',
+              brandAccent: '#0ea5e9',
+            },
+          },
+        },
+      };
+    </script>
+    <meta name="theme-color" content="#22c55e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
-    <main class="container">
-      <h1>Mini Meet</h1>
-      <p>Create a 1:1 video meeting and share the link.</p>
-      <a class="btn" href="/new">Start a meeting</a>
-      <div class="divider">or</div>
-      <form id="join-form">
-        <label for="room">Join by code:</label>
-        <input id="room" name="room" placeholder="Paste meeting code" />
-        <button class="btn" type="submit">Join</button>
-      </form>
+  <body class="app-shell">
+    <div class="decor-layer">
+      <div class="decor decor-a"></div>
+      <div class="decor decor-b"></div>
+    </div>
+    <main class="stage">
+      <section class="container">
+        <span class="badge">Quick &amp; private</span>
+        <h1>Mini Meet</h1>
+        <p>Spin up a private 1:1 video room in seconds. Share the link and you are ready.</p>
+        <a class="btn shadow-lg shadow-emerald-500/20" href="/new">Start a meeting</a>
+        <button class="btn secondary" type="button" data-install hidden>Add to Home Screen</button>
+        <ul class="feature-list">
+          <li>
+            <span class="blip"></span>
+            <span>Lightweight by design, share the link and join.</span>
+          </li>
+          <li>
+            <span class="blip"></span>
+            <span>No accounts, no downloads &mdash; straight to the call.</span>
+          </li>
+          <li>
+            <span class="blip"></span>
+            <span>WebRTC with TURN fallback keeps calls flowing.</span>
+          </li>
+        </ul>
+      </section>
     </main>
     <script>
-      const form = document.getElementById('join-form');
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const val = document.getElementById('room').value.trim();
-        if (val) window.location.href = `/m/${encodeURIComponent(val)}`;
+      const installBtn = document.querySelector('[data-install]');
+      const installBtnLabel = installBtn ? installBtn.textContent.trim() : 'Add to Home Screen';
+      let deferredPrompt;
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+          .register('/sw.js')
+          .catch((err) => console.warn('SW registration failed', err));
+      }
+
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        if (!installBtn) return;
+        installBtn.hidden = false;
+        installBtn.disabled = false;
+        installBtn.textContent = installBtnLabel;
       });
+
+      window.addEventListener('appinstalled', () => {
+        if (!installBtn) return;
+        installBtn.textContent = 'Ready on Home Screen';
+        installBtn.disabled = true;
+        installBtn.hidden = false;
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+          if (!deferredPrompt) {
+            installBtn.textContent = 'Open browser menu to install';
+            setTimeout(() => {
+              installBtn.textContent = installBtnLabel;
+            }, 3200);
+            return;
+          }
+          installBtn.disabled = true;
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome !== 'accepted') {
+            installBtn.disabled = false;
+            installBtn.textContent = installBtnLabel;
+          }
+          deferredPrompt = null;
+        });
+      }
     </script>
   </body>
   </html>
-

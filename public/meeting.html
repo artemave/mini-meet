@@ -4,9 +4,34 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Meeting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              brand: '#22c55e',
+              brandAccent: '#0ea5e9',
+            },
+          },
+        },
+      };
+    </script>
+    <meta name="theme-color" content="#22c55e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body>
+  <body class="app-shell meeting-shell">
+    <div class="decor-layer">
+      <div class="decor decor-a"></div>
+      <div class="decor decor-b"></div>
+    </div>
     <header class="topbar">
       <a class="brand" href="/">Mini Meet</a>
       <div class="room" id="room-id"></div>
@@ -21,7 +46,6 @@
     <footer class="controls">
       <button id="toggle-mic" class="btn">Mute</button>
       <button id="toggle-cam" class="btn">Stop Video</button>
-      <button id="export-logs" class="btn">Export Logs</button>
       <a class="btn danger" href="/">Leave</a>
     </footer>
     <script src="/app.js" type="module"></script>

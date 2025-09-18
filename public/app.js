@@ -2,11 +2,16 @@ const roomId = location.pathname.split('/').pop();
 const roomEl = document.getElementById('room-id');
 const copyBtn = document.getElementById('copy');
 const statusEl = document.getElementById('status');
-const exportBtn = document.getElementById('export-logs');
 const localVideo = document.getElementById('local');
 const remoteVideo = document.getElementById('remote');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .catch((err) => console.warn('SW registration failed', err));
+}
 
 roomEl.textContent = `Room: ${roomId}`;
 copyBtn.addEventListener('click', async () => {
@@ -19,15 +24,6 @@ copyBtn.addEventListener('click', async () => {
   } finally {
     setTimeout(() => (copyBtn.textContent = 'Copy link'), 1500);
   }
-});
-exportBtn.addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ roomId, events: logs }, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `webrtc-logs-${roomId}-${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 });
 
 let pc;

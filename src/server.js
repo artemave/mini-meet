@@ -26,7 +26,7 @@ if (process.env.SSL_CERT_PATH && process.env.SSL_KEY_PATH) {
   server = http.createServer(app);
 }
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 // Static files
