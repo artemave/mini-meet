@@ -2,10 +2,12 @@ const roomId = location.pathname.split('/').pop();
 const roomEl = document.getElementById('room-id');
 const copyBtn = document.getElementById('copy');
 const statusEl = document.getElementById('status');
-const localVideo = document.getElementById('local');
-const remoteVideo = document.getElementById('remote');
+const statusBaseClasses = statusEl?.dataset.statusBase || '';
+const localVideos = Array.from(document.querySelectorAll('[data-local-video]'));
+const remoteVideo = document.querySelector('[data-remote-video]');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
+const copyToast = document.getElementById('copy-toast');
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
@@ -13,18 +15,39 @@ if ('serviceWorker' in navigator) {
     .catch((err) => console.warn('SW registration failed', err));
 }
 
-roomEl.textContent = `Room: ${roomId}`;
-copyBtn.addEventListener('click', async () => {
+if (roomEl) {
+  roomEl.textContent = `Room: ${roomId}`;
+}
+
+copyBtn?.addEventListener('click', async () => {
   try {
     if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unsupported');
     await navigator.clipboard.writeText(location.href);
-    copyBtn.textContent = 'Copied!';
+    showCopyToast();
   } catch (_) {
     window.prompt('Copy meeting link:', location.href);
-  } finally {
-    setTimeout(() => (copyBtn.textContent = 'Copy link'), 1500);
   }
 });
+
+let copyToastVisibleTimer;
+let copyToastResetTimer;
+function showCopyToast() {
+  if (!copyToast) return;
+  clearTimeout(copyToastVisibleTimer);
+  clearTimeout(copyToastResetTimer);
+  copyToast.hidden = false;
+  // Force reflow so transition runs after removing hidden
+  void copyToast.offsetWidth;
+  copyToast.classList.remove('opacity-0');
+  copyToast.classList.add('opacity-100');
+  copyToastVisibleTimer = setTimeout(() => {
+    copyToast.classList.remove('opacity-100');
+    copyToast.classList.add('opacity-0');
+    copyToastResetTimer = setTimeout(() => {
+      if (copyToast) copyToast.hidden = true;
+    }, 220);
+  }, 1600);
+}
 
 let pc;
 const logs = [];
@@ -35,15 +58,33 @@ function log(type, data) {
 }
 function setStatus(text, mode) {
   if (!statusEl) return;
-  statusEl.textContent = text;
-  statusEl.classList.remove('ok', 'bad');
-  if (mode) statusEl.classList.add(mode);
+  const key = (text || '').toLowerCase();
+  const labels = {
+    waiting: 'Waiting for peer',
+    connecting: 'Waiting for peer',
+    connected: 'Connected',
+    failed: 'Connection failed',
+    disconnected: 'Disconnected',
+    idle: 'Idle',
+    'room is full': 'Room is full',
+    'needs https or localhost': 'HTTPS required',
+    'camera/mic error': 'Camera/mic error',
+  };
+  const baseLabel = labels[key] || text || 'Idle';
+  statusEl.textContent = baseLabel;
+
+  const variants = {
+    ok: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_14px_rgba(34,197,94,0.45)] animate-none',
+    bad: 'border-rose-400/40 bg-rose-500/20 text-rose-100 animate-none',
+    waiting: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_16px_rgba(34,197,94,0.5)] animate-pulse',
+  };
+  const fallback = 'border-white/10 bg-slate-900/70 text-slate-200 animate-none';
+  statusEl.className = `${statusBaseClasses} ${variants[mode] || fallback}`.trim();
+
 }
 
 let localStream;
 let isInitiator = false;
-
-window.addEventListener('beforeunload', () => send('bye'));
 
 async function start() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -53,7 +94,15 @@ async function start() {
   }
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = localStream;
+    for (const videoEl of localVideos) {
+      if (!videoEl) continue;
+      videoEl.srcObject = localStream;
+      try {
+        videoEl.play();
+      } catch (_) {
+        // Autoplay might be blocked until the user interacts; ignore.
+      }
+    }
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
     updateMicButton();
     updateCamButton();
@@ -94,7 +143,10 @@ ws.onmessage = async (event) => {
       break;
     case 'bye':
       // Remote left; reset remote video
-      remoteVideo.srcObject = null;
+      if (remoteVideo) {
+        remoteVideo.srcObject = null;
+      }
+      setStatus('waiting', 'waiting');
       break;
   }
 };
@@ -113,9 +165,9 @@ async function setupPeerConnection() {
     // ignore and fallback to STUN only
   }
   pc = new RTCPeerConnection({ iceServers });
-  setStatus('connecting');
+  setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
-    if (remoteVideo.srcObject !== e.streams[0]) {
+    if (remoteVideo && remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
     }
   };
@@ -177,28 +229,44 @@ function send(type, payload) {
 }
 
 function updateMicButton() {
+  if (!toggleMic) return;
   if (!localStream) return;
   const enabled = localStream.getAudioTracks().every((t) => t.enabled);
-  toggleMic.textContent = enabled ? 'Mute' : 'Unmute';
-  toggleMic.classList.toggle('off', !enabled);
+  toggleMic.dataset.state = enabled ? 'on' : 'off';
   toggleMic.setAttribute('aria-pressed', String(!enabled));
+  const label = enabled ? 'Mute microphone' : 'Unmute microphone';
+  toggleMic.setAttribute('aria-label', label);
+  const sr = toggleMic.querySelector('[data-label]');
+  if (sr) sr.textContent = label;
+  const iconOn = toggleMic.querySelector('[data-icon="mic-on"]');
+  const iconOff = toggleMic.querySelector('[data-icon="mic-off"]');
+  if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+  if (iconOff) iconOff.classList.toggle('hidden', enabled);
 }
 function updateCamButton() {
+  if (!toggleCam) return;
   if (!localStream) return;
   const enabled = localStream.getVideoTracks().every((t) => t.enabled);
-  toggleCam.textContent = enabled ? 'Stop Video' : 'Start Video';
-  toggleCam.classList.toggle('off', !enabled);
+  toggleCam.dataset.state = enabled ? 'on' : 'off';
   toggleCam.setAttribute('aria-pressed', String(!enabled));
+  const label = enabled ? 'Stop video' : 'Start video';
+  toggleCam.setAttribute('aria-label', label);
+  const sr = toggleCam.querySelector('[data-label]');
+  if (sr) sr.textContent = label;
+  const iconOn = toggleCam.querySelector('[data-icon="cam-on"]');
+  const iconOff = toggleCam.querySelector('[data-icon="cam-off"]');
+  if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+  if (iconOff) iconOff.classList.toggle('hidden', enabled);
 }
 
-toggleMic.addEventListener('click', () => {
+toggleMic?.addEventListener('click', () => {
   if (!localStream) return;
   const enabled = localStream.getAudioTracks().every((t) => t.enabled);
   localStream.getAudioTracks().forEach((t) => (t.enabled = !enabled));
   updateMicButton();
 });
 
-toggleCam.addEventListener('click', () => {
+toggleCam?.addEventListener('click', () => {
   if (!localStream) return;
   const enabled = localStream.getVideoTracks().every((t) => t.enabled);
   localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
