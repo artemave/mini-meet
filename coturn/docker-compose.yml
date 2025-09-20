@@ -1,0 +1,40 @@
+services:
+  coturn:
+    depends_on:
+      certbot:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: coturn.Dockerfile
+      args:
+        TURN_SECRET: ${TURN_SECRET:?TURN_SECRET build arg not set}
+    container_name: coturn
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TURN_DOMAIN: ${TURN_DOMAIN:-turn.artem.rocks}
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./letsencrypt:/etc/letsencrypt
+  certbot:
+    build:
+      context: .
+      dockerfile: certbot.Dockerfile
+    container_name: certbot
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./letsencrypt:/etc/letsencrypt
+      - ./letsencrypt-logs:/var/log/letsencrypt
+      - ./acme:/var/lib/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-mr@artem.rocks}
+      TURN_DOMAIN: ${TURN_DOMAIN:-turn.artem.rocks}
+      COTURN_CONTAINER: ${COTURN_CONTAINER:-coturn}
+      RENEW_INTERVAL: ${RENEW_INTERVAL:-12h}
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /etc/letsencrypt/live/${TURN_DOMAIN:-turn.artem.rocks}/fullchain.pem"]
+      interval: 30s
+      timeout: 5s
+      retries: 10

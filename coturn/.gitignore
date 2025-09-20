@@ -1,0 +1,4 @@
+.env
+letsencrypt/
+letsencrypt-logs/
+acme/
