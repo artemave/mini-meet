@@ -142,16 +142,29 @@ ws.onmessage = async (event) => {
       await onCandidate(msg.payload);
       break;
     case 'bye':
-      // Remote left; reset remote video
       if (remoteVideo) {
         remoteVideo.srcObject = null;
       }
+      isInitiator = true;
+      await setupPeerConnection();
       setStatus('waiting', 'waiting');
       break;
   }
 };
 
 async function setupPeerConnection() {
+  if (pc) {
+    try {
+      pc.ontrack = null;
+      pc.onicecandidate = null;
+      pc.onicegatheringstatechange = null;
+      pc.oniceconnectionstatechange = null;
+      pc.onconnectionstatechange = null;
+      pc.onsignalingstatechange = null;
+      pc.close();
+    } catch (_) {}
+    pc = null;
+  }
   const iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
   try {
     const resp = await fetch('/turn', { cache: 'no-store' });
