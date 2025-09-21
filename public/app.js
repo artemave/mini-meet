@@ -9,6 +9,12 @@ const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
 
+try {
+  localStorage.setItem('mini-meet:last-room', roomId);
+} catch (_) {
+  // ignore storage errors (private mode, etc.)
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
