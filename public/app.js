@@ -15,6 +15,11 @@ const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundar
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
 let overlayDragState = null;
 let overlayInitialized = false;
+const overlayPointers = selfOverlay ? new Map() : null;
+let overlayPinchState = null;
+const DEFAULT_OVERLAY_ASPECT = 12 / 9;
+let overlayAspectRatio = DEFAULT_OVERLAY_ASPECT;
+const MIN_OVERLAY_WIDTH = 80;
 
 try {
   localStorage.setItem('mini-meet:last-room', roomId);
@@ -106,6 +111,15 @@ function initializeOverlayPosition() {
   }
   const boundaryRect = overlayBoundary.getBoundingClientRect();
   const overlayRect = selfOverlay.getBoundingClientRect();
+  if (overlayRect.width > 0 && overlayRect.height > 0) {
+    overlayAspectRatio = overlayRect.height / overlayRect.width;
+    if (!selfOverlay.style.width) {
+      selfOverlay.style.width = `${overlayRect.width}px`;
+    }
+    if (!selfOverlay.style.height) {
+      selfOverlay.style.height = `${overlayRect.height}px`;
+    }
+  }
   const initialTop = Math.max(0, overlayRect.top - boundaryRect.top);
   const initialLeft = Math.max(0, overlayRect.left - boundaryRect.left);
   selfOverlay.style.bottom = 'auto';
@@ -118,6 +132,16 @@ function initializeOverlayPosition() {
 
 function clampOverlayToBounds() {
   if (!selfOverlay || !overlayBoundary || !overlayInitialized) return;
+  const ratio = overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
+  const boundaryWidth = overlayBoundary.clientWidth;
+  const boundaryHeight = overlayBoundary.clientHeight;
+  if (boundaryWidth && boundaryHeight) {
+    const maxWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(boundaryWidth, boundaryHeight / ratio));
+    if (selfOverlay.offsetWidth > maxWidth + 0.5) {
+      selfOverlay.style.width = `${maxWidth}px`;
+      selfOverlay.style.height = `${maxWidth * ratio}px`;
+    }
+  }
   const maxLeft = Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth);
   const maxTop = Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight);
   const currentLeft = parseFloat(selfOverlay.style.left || '0');
@@ -132,20 +156,37 @@ function handleOverlayPointerDown(event) {
   if (!selfOverlay || !overlayBoundary) return;
   if (!canDragOverlay(event)) return;
   initializeOverlayPosition();
-  overlayDragState = {
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-    startLeft: selfOverlay.offsetLeft,
-    startTop: selfOverlay.offsetTop,
-    maxLeft: Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth),
-    maxTop: Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight),
-  };
+  if (overlayPointers) {
+    overlayPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  }
+  if (overlayPointers && overlayPointers.size === 2) {
+    overlayDragState = null;
+    startOverlayPinch();
+  } else {
+    overlayPinchState = null;
+    overlayDragState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: selfOverlay.offsetLeft,
+      startTop: selfOverlay.offsetTop,
+      maxLeft: Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth),
+      maxTop: Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight),
+    };
+  }
   try { selfOverlay.setPointerCapture(event.pointerId); } catch (_) {}
   event.preventDefault();
 }
 
 function handleOverlayPointerMove(event) {
+  if (overlayPointers && overlayPointers.has(event.pointerId)) {
+    overlayPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  }
+  if (overlayPinchState) {
+    updateOverlayPinch();
+    event.preventDefault();
+    return;
+  }
   if (!overlayDragState || event.pointerId !== overlayDragState.pointerId) return;
   const deltaX = event.clientX - overlayDragState.startX;
   const deltaY = event.clientY - overlayDragState.startY;
@@ -157,10 +198,24 @@ function handleOverlayPointerMove(event) {
 }
 
 function handleOverlayPointerUp(event) {
-  if (!overlayDragState || event.pointerId !== overlayDragState.pointerId) return;
-  try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
-  overlayDragState = null;
-  clampOverlayToBounds();
+  let shouldClamp = false;
+  if (overlayPointers) {
+    overlayPointers.delete(event.pointerId);
+  }
+  if (overlayPinchState) {
+    if (!overlayPointers || overlayPointers.size < 2) {
+      overlayPinchState = null;
+      shouldClamp = true;
+    }
+  }
+  if (overlayDragState && event.pointerId === overlayDragState.pointerId) {
+    try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
+    overlayDragState = null;
+    shouldClamp = true;
+  } else {
+    try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
+  }
+  if (shouldClamp) clampOverlayToBounds();
 }
 
 function canDragOverlay(event) {
@@ -168,6 +223,43 @@ function canDragOverlay(event) {
     return event.pointerType === 'touch';
   }
   return prefersCoarsePointer;
+}
+
+function startOverlayPinch() {
+  if (!selfOverlay || !overlayBoundary || !overlayPointers || overlayPointers.size < 2) return;
+  const points = Array.from(overlayPointers.values());
+  const [a, b] = points;
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  if (!distance) return;
+  overlayPinchState = {
+    baseDistance: distance,
+    startWidth: selfOverlay.offsetWidth,
+  };
+  const rect = selfOverlay.getBoundingClientRect();
+  if (rect.width > 0 && rect.height > 0) {
+    overlayAspectRatio = rect.height / rect.width || overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
+  }
+  if (!selfOverlay.style.width) {
+    selfOverlay.style.width = `${selfOverlay.offsetWidth}px`;
+  }
+}
+
+function updateOverlayPinch() {
+  if (!selfOverlay || !overlayBoundary || !overlayPointers || overlayPointers.size < 2 || !overlayPinchState) return;
+  const points = Array.from(overlayPointers.values()).slice(0, 2);
+  const [a, b] = points;
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  if (!distance || !overlayPinchState.baseDistance) return;
+  const scale = distance / overlayPinchState.baseDistance;
+  const rawWidth = overlayPinchState.startWidth * scale;
+  const ratio = overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
+  const boundaryWidth = overlayBoundary.clientWidth || rawWidth;
+  const boundaryHeight = overlayBoundary.clientHeight || (rawWidth * ratio);
+  const maxWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(boundaryWidth, boundaryHeight / ratio));
+  const newWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(rawWidth, maxWidth));
+  selfOverlay.style.width = `${newWidth}px`;
+  selfOverlay.style.height = `${newWidth * ratio}px`;
+  clampOverlayToBounds();
 }
 
 let pc;
