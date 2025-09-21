@@ -17,9 +17,11 @@ let overlayDragState = null;
 let overlayInitialized = false;
 const overlayPointers = selfOverlay ? new Map() : null;
 let overlayPinchState = null;
-const DEFAULT_OVERLAY_ASPECT = 12 / 9;
-let overlayAspectRatio = DEFAULT_OVERLAY_ASPECT;
+const PORTRAIT_OVERLAY_ASPECT = 12 / 9;
+const LANDSCAPE_OVERLAY_ASPECT = 9 / 16;
+let overlayAspectRatio = PORTRAIT_OVERLAY_ASPECT;
 const MIN_OVERLAY_WIDTH = 80;
+const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(orientation: portrait)') : null;
 
 try {
   localStorage.setItem('mini-meet:last-room', roomId);
@@ -106,20 +108,12 @@ async function restartConnection(reason) {
 function initializeOverlayPosition() {
   if (!selfOverlay || !overlayBoundary) return;
   if (overlayInitialized) {
+    syncOverlayAspectForOrientation();
     clampOverlayToBounds();
     return;
   }
   const boundaryRect = overlayBoundary.getBoundingClientRect();
   const overlayRect = selfOverlay.getBoundingClientRect();
-  if (overlayRect.width > 0 && overlayRect.height > 0) {
-    overlayAspectRatio = overlayRect.height / overlayRect.width;
-    if (!selfOverlay.style.width) {
-      selfOverlay.style.width = `${overlayRect.width}px`;
-    }
-    if (!selfOverlay.style.height) {
-      selfOverlay.style.height = `${overlayRect.height}px`;
-    }
-  }
   const initialTop = Math.max(0, overlayRect.top - boundaryRect.top);
   const initialLeft = Math.max(0, overlayRect.left - boundaryRect.left);
   selfOverlay.style.bottom = 'auto';
@@ -127,19 +121,25 @@ function initializeOverlayPosition() {
   selfOverlay.style.top = `${initialTop}px`;
   selfOverlay.style.left = `${initialLeft}px`;
   overlayInitialized = true;
-  clampOverlayToBounds();
+  syncOverlayAspectForOrientation(true);
 }
 
 function clampOverlayToBounds() {
   if (!selfOverlay || !overlayBoundary || !overlayInitialized) return;
-  const ratio = overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
+  const ratio = overlayAspectRatio || PORTRAIT_OVERLAY_ASPECT;
   const boundaryWidth = overlayBoundary.clientWidth;
   const boundaryHeight = overlayBoundary.clientHeight;
-  if (boundaryWidth && boundaryHeight) {
-    const maxWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(boundaryWidth, boundaryHeight / ratio));
-    if (selfOverlay.offsetWidth > maxWidth + 0.5) {
-      selfOverlay.style.width = `${maxWidth}px`;
-      selfOverlay.style.height = `${maxWidth * ratio}px`;
+  let maxWidth = null;
+  if (boundaryWidth) maxWidth = boundaryWidth;
+  if (boundaryHeight) {
+    const heightLimited = boundaryHeight / ratio;
+    maxWidth = maxWidth === null ? heightLimited : Math.min(maxWidth, heightLimited);
+  }
+  if (maxWidth !== null && Number.isFinite(maxWidth)) {
+    const nextWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(selfOverlay.offsetWidth || maxWidth, maxWidth));
+    if (!Number.isNaN(nextWidth)) {
+      selfOverlay.style.width = `${nextWidth}px`;
+      selfOverlay.style.height = '';
     }
   }
   const maxLeft = Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth);
@@ -225,6 +225,48 @@ function canDragOverlay(event) {
   return prefersCoarsePointer;
 }
 
+function currentOverlayOrientationAspect() {
+  if (orientationQuery && typeof orientationQuery.matches === 'boolean') {
+    return orientationQuery.matches ? PORTRAIT_OVERLAY_ASPECT : LANDSCAPE_OVERLAY_ASPECT;
+  }
+  if (typeof window !== 'undefined') {
+    return window.innerHeight >= window.innerWidth ? PORTRAIT_OVERLAY_ASPECT : LANDSCAPE_OVERLAY_ASPECT;
+  }
+  return PORTRAIT_OVERLAY_ASPECT;
+}
+
+function syncOverlayAspectForOrientation(force = false) {
+  if (!selfOverlay || !overlayBoundary) return;
+  if (!overlayInitialized && !force) return;
+  const nextAspect = currentOverlayOrientationAspect();
+  const ratioChanged = Math.abs(nextAspect - overlayAspectRatio) > 0.0001;
+  if (!force && !ratioChanged) {
+    clampOverlayToBounds();
+    return;
+  }
+  overlayAspectRatio = nextAspect;
+  const aspectCss = overlayAspectRatio > 0 ? 1 / overlayAspectRatio : 1;
+  if (Number.isFinite(aspectCss) && aspectCss > 0) {
+    selfOverlay.style.aspectRatio = `${aspectCss}`;
+  }
+  const rect = selfOverlay.getBoundingClientRect();
+  let width = rect.width || parseFloat(selfOverlay.style.width) || MIN_OVERLAY_WIDTH;
+  const boundaryWidth = overlayBoundary.clientWidth || width;
+  const boundaryHeight = overlayBoundary.clientHeight || width * overlayAspectRatio;
+  let maxWidth = boundaryWidth || null;
+  if (boundaryHeight) {
+    const heightWidth = boundaryHeight / overlayAspectRatio;
+    maxWidth = maxWidth === null ? heightWidth : Math.min(maxWidth, heightWidth);
+  }
+  if (maxWidth === null || !Number.isFinite(maxWidth)) {
+    maxWidth = width;
+  }
+  const nextWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(width, maxWidth));
+  selfOverlay.style.width = `${nextWidth}px`;
+  selfOverlay.style.height = '';
+  clampOverlayToBounds();
+}
+
 function startOverlayPinch() {
   if (!selfOverlay || !overlayBoundary || !overlayPointers || overlayPointers.size < 2) return;
   const points = Array.from(overlayPointers.values());
@@ -233,14 +275,10 @@ function startOverlayPinch() {
   if (!distance) return;
   overlayPinchState = {
     baseDistance: distance,
-    startWidth: selfOverlay.offsetWidth,
+    startWidth: selfOverlay.offsetWidth || parseFloat(selfOverlay.style.width) || MIN_OVERLAY_WIDTH,
   };
-  const rect = selfOverlay.getBoundingClientRect();
-  if (rect.width > 0 && rect.height > 0) {
-    overlayAspectRatio = rect.height / rect.width || overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
-  }
-  if (!selfOverlay.style.width) {
-    selfOverlay.style.width = `${selfOverlay.offsetWidth}px`;
+  if (!Number.isFinite(overlayPinchState.startWidth) || overlayPinchState.startWidth <= 0) {
+    overlayPinchState.startWidth = MIN_OVERLAY_WIDTH;
   }
 }
 
@@ -252,13 +290,20 @@ function updateOverlayPinch() {
   if (!distance || !overlayPinchState.baseDistance) return;
   const scale = distance / overlayPinchState.baseDistance;
   const rawWidth = overlayPinchState.startWidth * scale;
-  const ratio = overlayAspectRatio || DEFAULT_OVERLAY_ASPECT;
+  const ratio = overlayAspectRatio || PORTRAIT_OVERLAY_ASPECT;
   const boundaryWidth = overlayBoundary.clientWidth || rawWidth;
   const boundaryHeight = overlayBoundary.clientHeight || (rawWidth * ratio);
-  const maxWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(boundaryWidth, boundaryHeight / ratio));
+  let maxWidth = boundaryWidth || null;
+  if (boundaryHeight) {
+    const fromHeight = boundaryHeight / ratio;
+    maxWidth = maxWidth === null ? fromHeight : Math.min(maxWidth, fromHeight);
+  }
+  if (maxWidth === null || !Number.isFinite(maxWidth)) {
+    maxWidth = rawWidth;
+  }
   const newWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(rawWidth, maxWidth));
   selfOverlay.style.width = `${newWidth}px`;
-  selfOverlay.style.height = `${newWidth * ratio}px`;
+  selfOverlay.style.height = '';
   clampOverlayToBounds();
 }
 
@@ -518,7 +563,7 @@ toggleCam?.addEventListener('click', () => {
 });
 
 if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
-  const clampAfterResize = () => requestAnimationFrame(clampOverlayToBounds);
+  const reflowOverlay = () => requestAnimationFrame(() => syncOverlayAspectForOrientation());
   requestAnimationFrame(() => {
     initializeOverlayPosition();
   });
@@ -526,8 +571,16 @@ if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
   selfOverlay.addEventListener('pointermove', handleOverlayPointerMove, { passive: false });
   selfOverlay.addEventListener('pointerup', handleOverlayPointerUp);
   selfOverlay.addEventListener('pointercancel', handleOverlayPointerUp);
-  window.addEventListener('resize', clampAfterResize);
-  window.addEventListener('orientationchange', clampAfterResize);
+  window.addEventListener('resize', reflowOverlay);
+  window.addEventListener('orientationchange', reflowOverlay);
+  if (orientationQuery) {
+    const orientationHandler = () => syncOverlayAspectForOrientation();
+    if (typeof orientationQuery.addEventListener === 'function') {
+      orientationQuery.addEventListener('change', orientationHandler);
+    } else if (typeof orientationQuery.addListener === 'function') {
+      orientationQuery.addListener(orientationHandler);
+    }
+  }
 }
 
 // Send logs to server periodically and on unload
