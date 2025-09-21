@@ -5,5 +5,6 @@ RUN test -n "$TURN_SECRET" || (echo "TURN_SECRET build arg must be provided" && 
 ENV TURN_SECRET=$TURN_SECRET
 
 COPY coturn-entrypoint.sh /usr/local/bin/coturn-entrypoint.sh
+COPY turnserver.conf /etc/coturn/turnserver.conf
 
 ENTRYPOINT ["/usr/local/bin/coturn-entrypoint.sh"]

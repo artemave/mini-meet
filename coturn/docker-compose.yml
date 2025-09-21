@@ -11,10 +11,10 @@ services:
     container_name: coturn
     restart: unless-stopped
     network_mode: host
+    user: root
     environment:
       TURN_DOMAIN: ${TURN_DOMAIN:-turn.artem.rocks}
     volumes:
-      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
       - ./letsencrypt:/etc/letsencrypt
   certbot:
     build:

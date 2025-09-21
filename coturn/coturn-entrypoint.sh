@@ -10,6 +10,6 @@ while [ ! -f "/etc/letsencrypt/live/${TURN_DOMAIN}/fullchain.pem" ]; do
 done
 
 exec turnserver \
-  --config=/etc/coturn/turnserver.conf \
+  -c /etc/coturn/turnserver.conf \
   --use-auth-secret \
   --static-auth-secret="${TURN_SECRET}"

@@ -18,12 +18,6 @@ issue_if_missing() {
   return 0
 }
 
-notify_coturn() {
-  curl --fail --silent --show-error \
-    --unix-socket /var/run/docker.sock \
-    -X POST "http://localhost/containers/${COTURN_CONTAINER}/kill?signal=HUP"
-}
-
 while true; do
   if issue_if_missing; then
     break
@@ -33,6 +27,6 @@ while true; do
 done
 
 while true; do
-  certbot renew --standalone --quiet --deploy-hook notify_coturn || true
+  certbot renew --standalone --quiet --deploy-hook /usr/local/bin/notify_coturn || true
   sleep "${RENEW_INTERVAL}"
 done
