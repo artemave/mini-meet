@@ -9,7 +9,12 @@ const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
 let reconnectTimer;
-const RECONNECT_DELAY = 1000;
+const RECONNECT_DELAY = 1100;
+const selfOverlay = document.querySelector('[data-self-overlay]');
+const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
+const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
+let overlayDragState = null;
+let overlayInitialized = false;
 
 try {
   localStorage.setItem('mini-meet:last-room', roomId);
@@ -91,6 +96,78 @@ async function restartConnection(reason) {
   } else {
     send('ready');
   }
+}
+
+function initializeOverlayPosition() {
+  if (!selfOverlay || !overlayBoundary) return;
+  if (overlayInitialized) {
+    clampOverlayToBounds();
+    return;
+  }
+  const boundaryRect = overlayBoundary.getBoundingClientRect();
+  const overlayRect = selfOverlay.getBoundingClientRect();
+  const initialTop = Math.max(0, overlayRect.top - boundaryRect.top);
+  const initialLeft = Math.max(0, overlayRect.left - boundaryRect.left);
+  selfOverlay.style.bottom = 'auto';
+  selfOverlay.style.right = 'auto';
+  selfOverlay.style.top = `${initialTop}px`;
+  selfOverlay.style.left = `${initialLeft}px`;
+  overlayInitialized = true;
+  clampOverlayToBounds();
+}
+
+function clampOverlayToBounds() {
+  if (!selfOverlay || !overlayBoundary || !overlayInitialized) return;
+  const maxLeft = Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth);
+  const maxTop = Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight);
+  const currentLeft = parseFloat(selfOverlay.style.left || '0');
+  const currentTop = parseFloat(selfOverlay.style.top || '0');
+  const nextLeft = Math.min(Math.max(currentLeft, 0), maxLeft);
+  const nextTop = Math.min(Math.max(currentTop, 0), maxTop);
+  if (!Number.isNaN(nextLeft)) selfOverlay.style.left = `${nextLeft}px`;
+  if (!Number.isNaN(nextTop)) selfOverlay.style.top = `${nextTop}px`;
+}
+
+function handleOverlayPointerDown(event) {
+  if (!selfOverlay || !overlayBoundary) return;
+  if (!canDragOverlay(event)) return;
+  initializeOverlayPosition();
+  overlayDragState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startLeft: selfOverlay.offsetLeft,
+    startTop: selfOverlay.offsetTop,
+    maxLeft: Math.max(0, overlayBoundary.clientWidth - selfOverlay.offsetWidth),
+    maxTop: Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight),
+  };
+  try { selfOverlay.setPointerCapture(event.pointerId); } catch (_) {}
+  event.preventDefault();
+}
+
+function handleOverlayPointerMove(event) {
+  if (!overlayDragState || event.pointerId !== overlayDragState.pointerId) return;
+  const deltaX = event.clientX - overlayDragState.startX;
+  const deltaY = event.clientY - overlayDragState.startY;
+  const nextLeft = Math.min(Math.max(overlayDragState.startLeft + deltaX, 0), overlayDragState.maxLeft);
+  const nextTop = Math.min(Math.max(overlayDragState.startTop + deltaY, 0), overlayDragState.maxTop);
+  selfOverlay.style.left = `${nextLeft}px`;
+  selfOverlay.style.top = `${nextTop}px`;
+  event.preventDefault();
+}
+
+function handleOverlayPointerUp(event) {
+  if (!overlayDragState || event.pointerId !== overlayDragState.pointerId) return;
+  try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
+  overlayDragState = null;
+  clampOverlayToBounds();
+}
+
+function canDragOverlay(event) {
+  if (event.pointerType) {
+    return event.pointerType === 'touch';
+  }
+  return prefersCoarsePointer;
 }
 
 let pc;
@@ -347,6 +424,19 @@ toggleCam?.addEventListener('click', () => {
   localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
   updateCamButton();
 });
+
+if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
+  const clampAfterResize = () => requestAnimationFrame(clampOverlayToBounds);
+  requestAnimationFrame(() => {
+    initializeOverlayPosition();
+  });
+  selfOverlay.addEventListener('pointerdown', handleOverlayPointerDown, { passive: false });
+  selfOverlay.addEventListener('pointermove', handleOverlayPointerMove, { passive: false });
+  selfOverlay.addEventListener('pointerup', handleOverlayPointerUp);
+  selfOverlay.addEventListener('pointercancel', handleOverlayPointerUp);
+  window.addEventListener('resize', clampAfterResize);
+  window.addEventListener('orientationchange', clampAfterResize);
+}
 
 // Send logs to server periodically and on unload
 function flushLogs(reason) {

@@ -71,6 +71,7 @@
         </div>
         <div
           class="relative flex-1 min-h-0 w-full overflow-hidden rounded-none border-none bg-slate-950 shadow-none md:aspect-video md:h-auto md:overflow-hidden md:rounded-2xl md:border md:border-slate-500/30 md:shadow-2xl md:shadow-cyan-500/20"
+          data-overlay-boundary
         >
           <video
             data-remote-video
@@ -79,7 +80,9 @@
             class="h-full w-full object-cover"
           ></video>
           <div
-            class="absolute bottom-4 right-4 aspect-[9/12] w-24 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
+            class="absolute aspect-[9/12] w-24 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
+            data-self-overlay
+            style="bottom:1rem; right:1rem; touch-action:none;"
           >
             <video
               data-local-video
