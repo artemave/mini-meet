@@ -8,6 +8,8 @@ const remoteVideo = document.querySelector('[data-remote-video]');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
+let reconnectTimer;
+const RECONNECT_DELAY = 1000;
 
 try {
   localStorage.setItem('mini-meet:last-room', roomId);
@@ -53,6 +55,42 @@ function showCopyToast() {
       if (copyToast) copyToast.hidden = true;
     }, 220);
   }, 1600);
+}
+
+function clearReconnectTimer() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
+function scheduleReconnect(reason) {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
+  }, RECONNECT_DELAY);
+}
+
+async function restartConnection(reason) {
+  log('reconnect_attempt', { reason, initiator: isInitiator });
+  clearReconnectTimer();
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    log('reconnect_ws_closed', { state: ws?.readyState });
+    try { ws?.close(); } catch (_) {}
+    setTimeout(() => location.reload(), 500);
+    return;
+  }
+  await setupPeerConnection();
+  if (!localStream) {
+    await start();
+  }
+  setStatus('waiting', 'waiting');
+  if (isInitiator) {
+    await makeOffer();
+  } else {
+    send('ready');
+  }
 }
 
 let pc;
@@ -121,6 +159,10 @@ async function start() {
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
 const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`);
 
+ws.addEventListener('close', () => {
+  scheduleReconnect('ws-closed');
+});
+
 ws.onmessage = async (event) => {
   const msg = JSON.parse(event.data);
   switch (msg.type) {
@@ -148,6 +190,7 @@ ws.onmessage = async (event) => {
       await onCandidate(msg.payload);
       break;
     case 'bye':
+      clearReconnectTimer();
       if (remoteVideo) {
         remoteVideo.srcObject = null;
       }
@@ -203,12 +246,25 @@ async function setupPeerConnection() {
   };
   pc.oniceconnectionstatechange = () => {
     log('iceConnectionState', pc.iceConnectionState);
-    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') setStatus('connected', 'ok');
-    if (pc.iceConnectionState === 'failed') setStatus('failed', 'bad');
-    if (pc.iceConnectionState === 'disconnected') setStatus('disconnected', 'bad');
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      clearReconnectTimer();
+      setStatus('connected', 'ok');
+    }
+    if (pc.iceConnectionState === 'failed') {
+      setStatus('failed', 'bad');
+      scheduleReconnect('ice-failed');
+    }
+    if (pc.iceConnectionState === 'disconnected') {
+      setStatus('disconnected', 'bad');
+      scheduleReconnect('ice-disconnected');
+    }
+    if (pc.iceConnectionState === 'closed') {
+      scheduleReconnect('ice-closed');
+    }
   };
   pc.onconnectionstatechange = () => {
     log('connectionState', pc.connectionState);
+    if (pc.connectionState === 'failed') scheduleReconnect('connection-failed');
   };
   pc.onsignalingstatechange = () => {
     log('signalingState', pc.signalingState);
