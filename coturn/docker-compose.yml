@@ -11,11 +11,17 @@ services:
     container_name: coturn
     restart: unless-stopped
     network_mode: host
-    user: root
     environment:
       TURN_DOMAIN: ${TURN_DOMAIN:-turn.artem.rocks}
     volumes:
       - ./letsencrypt:/etc/letsencrypt
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - ss -ltn | grep ':443' && ss -ltn | grep ':3478' && ss -lun | grep ':3478'
+      interval: 30s
+      timeout: 5s
+      retries: 5
   certbot:
     build:
       context: .
