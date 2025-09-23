@@ -9,6 +9,7 @@ const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
 let reconnectTimer;
+let isShuttingDown = false;
 const RECONNECT_DELAY = 1100;
 const selfOverlay = document.querySelector('[data-self-overlay]');
 const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
@@ -77,7 +78,7 @@ function clearReconnectTimer() {
 }
 
 function scheduleReconnect(reason) {
-  if (reconnectTimer) return;
+  if (isShuttingDown || reconnectTimer) return;
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
     restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
@@ -85,12 +86,15 @@ function scheduleReconnect(reason) {
 }
 
 async function restartConnection(reason) {
+  if (isShuttingDown) return;
   log('reconnect_attempt', { reason, initiator: isInitiator });
   clearReconnectTimer();
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     log('reconnect_ws_closed', { state: ws?.readyState });
     try { ws?.close(); } catch (_) {}
-    setTimeout(() => location.reload(), 500);
+    setTimeout(() => {
+      if (!isShuttingDown) location.reload();
+    }, 500);
     return;
   }
   await setupPeerConnection();
@@ -374,7 +378,7 @@ const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
 const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`);
 
 ws.addEventListener('close', () => {
-  scheduleReconnect('ws-closed');
+  if (!isShuttingDown) scheduleReconnect('ws-closed');
 });
 
 ws.onmessage = async (event) => {
@@ -517,6 +521,12 @@ function send(type, payload) {
   ws.send(JSON.stringify({ type, payload }));
 }
 
+function markShuttingDown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  clearReconnectTimer();
+}
+
 function updateMicButton() {
   if (!toggleMic) return;
   if (!localStream) return;
@@ -594,4 +604,9 @@ function flushLogs(reason) {
   }
 }
 setInterval(() => flushLogs('interval'), 10000);
-window.addEventListener('beforeunload', () => { send('bye'); flushLogs('unload'); });
+window.addEventListener('pagehide', markShuttingDown);
+window.addEventListener('beforeunload', () => {
+  markShuttingDown();
+  try { send('bye'); } catch (_) {}
+  flushLogs('unload');
+});

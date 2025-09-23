@@ -27,5 +27,4 @@
 
 ## Agent-Specific Instructions
 - Keep patches minimal and targeted; don’t refactor unrelated code.
-- Follow this structure and add missing `scripts/` as part of your change when needed.
 - Don't `git add`. Don't `git commit`. Don't `git push`.
