@@ -10,7 +10,8 @@ const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
 let reconnectTimer;
 let isShuttingDown = false;
-const RECONNECT_DELAY = 1100;
+let lastReconnectAttempt = 0;
+const RECONNECT_THROTTLE = 1000;
 const selfOverlay = document.querySelector('[data-self-overlay]');
 const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
@@ -79,10 +80,21 @@ function clearReconnectTimer() {
 
 function scheduleReconnect(reason) {
   if (isShuttingDown || reconnectTimer) return;
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
+
+  const now = Date.now();
+  const timeSinceLastAttempt = now - lastReconnectAttempt;
+
+  if (timeSinceLastAttempt >= RECONNECT_THROTTLE) {
+    lastReconnectAttempt = now;
     restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
-  }, RECONNECT_DELAY);
+  } else {
+    const delay = RECONNECT_THROTTLE - timeSinceLastAttempt;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      lastReconnectAttempt = Date.now();
+      restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
+    }, delay);
+  }
 }
 
 async function restartConnection(reason) {
@@ -91,10 +103,7 @@ async function restartConnection(reason) {
   clearReconnectTimer();
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     log('reconnect_ws_closed', { state: ws?.readyState });
-    try { ws?.close(); } catch (_) {}
-    setTimeout(() => {
-      if (!isShuttingDown) location.reload();
-    }, 500);
+    connectWebSocket();
     return;
   }
   await setupPeerConnection();
@@ -375,49 +384,59 @@ async function start() {
 }
 
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`);
+let ws;
 
-ws.addEventListener('close', () => {
-  if (!isShuttingDown) scheduleReconnect('ws-closed');
-});
-
-ws.onmessage = async (event) => {
-  const msg = JSON.parse(event.data);
-  switch (msg.type) {
-    case 'room_full':
-      setStatus('room is full', 'bad');
-      alert('This room already has 2 participants.');
-      try { ws.close(); } catch {}
-      return;
-    case 'welcome':
-      isInitiator = !!msg.initiator;
-      await setupPeerConnection();
-      await start();
-      if (!isInitiator) send('ready');
-      break;
-    case 'ready':
-      if (isInitiator) await makeOffer();
-      break;
-    case 'offer':
-      await onOffer(msg.payload);
-      break;
-    case 'answer':
-      await onAnswer(msg.payload);
-      break;
-    case 'candidate':
-      await onCandidate(msg.payload);
-      break;
-    case 'bye':
-      clearReconnectTimer();
-      if (remoteVideo) {
-        remoteVideo.srcObject = null;
-      }
-      isInitiator = true;
-      await setupPeerConnection();
-      setStatus('waiting', 'waiting');
-      break;
+function connectWebSocket() {
+  if (ws) {
+    try { ws.close(); } catch (_) {}
   }
-};
+
+  ws = new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`);
+
+  ws.addEventListener('close', () => {
+    if (!isShuttingDown) scheduleReconnect('ws-closed');
+  });
+
+  ws.onmessage = async (event) => {
+    const msg = JSON.parse(event.data);
+    switch (msg.type) {
+      case 'room_full':
+        setStatus('room is full', 'bad');
+        alert('This room already has 2 participants.');
+        try { ws.close(); } catch {}
+        return;
+      case 'welcome':
+        isInitiator = !!msg.initiator;
+        await setupPeerConnection();
+        await start();
+        if (!isInitiator) send('ready');
+        break;
+      case 'ready':
+        if (isInitiator) await makeOffer();
+        break;
+      case 'offer':
+        await onOffer(msg.payload);
+        break;
+      case 'answer':
+        await onAnswer(msg.payload);
+        break;
+      case 'candidate':
+        await onCandidate(msg.payload);
+        break;
+      case 'bye':
+        clearReconnectTimer();
+        if (remoteVideo) {
+          remoteVideo.srcObject = null;
+        }
+        isInitiator = true;
+        await setupPeerConnection();
+        setStatus('waiting', 'waiting');
+        break;
+    }
+  };
+}
+
+connectWebSocket();
 
 async function setupPeerConnection() {
   if (pc) {
