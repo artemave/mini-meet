@@ -32,7 +32,7 @@ export default function layout({
             },
           };
         </script>
-        <meta name="theme-color" content="#22c55e" />
+        <meta name="theme-color" content="#0f172a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />

@@ -3,7 +3,7 @@ import layout from './layout.html.js';
 
 export default function indexView() {
   const body = html`
-    <body
+    <div
       class="relative min-h-screen overflow-x-hidden bg-slate-950 font-sans text-slate-100"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -52,7 +52,7 @@ export default function indexView() {
         </section>
       </main>
       <script src="/index.js" type="module"></script>
-    </body>
+    </div>
   `;
 
   return layout({ title: 'Mini Meet', body });
