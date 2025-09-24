@@ -7,6 +7,7 @@ RUN npm ci --omit=dev || npm install --omit=dev
 
 # Copy app source
 COPY src ./src
+COPY views ./views
 COPY public ./public
 
 ENV NODE_ENV=production

@@ -6,6 +6,7 @@ import url from 'url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
+import Rollbar from 'rollbar';
 import indexView from '../views/index.html.js';
 import meetingView from '../views/meeting.html.js';
 
@@ -30,6 +31,13 @@ if (process.env.SSL_CERT_PATH && process.env.SSL_KEY_PATH) {
 
 const PORT = process.env.PORT || 3003;
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+const rollbar = new Rollbar({
+  accessToken: process.env.ROLLBAR_SERVER_ACCESS_TOKEN,
+  captureUncaught: true,
+  captureUnhandledRejections: true,
+  environment: process.env.ROLLBAR_ENVIRONMENT || 'development',
+});
 
 // Static files
 const publicDir = path.join(__dirname, '..', 'public');
@@ -107,6 +115,8 @@ app.post('/log', (req, res) => {
   }
   res.sendStatus(204);
 });
+
+app.use(rollbar.errorHandler());
 
 // In-memory room registry: roomId -> Set of ws
 const rooms = new Map();
