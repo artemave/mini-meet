@@ -6,6 +6,8 @@ import url from 'url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
+import indexView from '../views/index.html.js';
+import meetingView from '../views/meeting.html.js';
 
 // Basic Express server + WS signaling for 1:1 rooms.
 const app = express();
@@ -42,12 +44,14 @@ app.get('/new', (req, res) => {
 
 // Serve meeting page
 app.get('/m/:id', (req, res) => {
-  res.sendFile(path.join(publicDir, 'meeting.html'));
+  const html = meetingView({ roomId: req.params.id });
+  res.send(String(html));
 });
 
 // Root: simple landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+  const html = indexView();
+  res.send(String(html));
 });
 
 // TURN REST credentials endpoint

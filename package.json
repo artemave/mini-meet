@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "NODE_ENV=development node src/server.js"
+    "dev": "NODE_ENV=development node --watch src/server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
+    "nanohtml": "^1.10.0",
     "ws": "^8.18.0"
   }
 }
-
