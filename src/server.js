@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import Rollbar from 'rollbar';
 import indexView from '../views/index.html.js';
 import meetingView from '../views/meeting.html.js';
+import morgan from 'morgan'
 
 // Basic Express server + WS signaling for 1:1 rooms.
 const app = express();
@@ -41,6 +42,7 @@ const rollbar = new Rollbar({
 
 // Static files
 const publicDir = path.join(__dirname, '..', 'public');
+app.use(morgan('tiny'))
 app.use(express.static(publicDir));
 app.use(express.json({ limit: '200kb' }));
 
@@ -98,22 +100,6 @@ app.get('/turn', (req, res) => {
     ],
     ttl,
   });
-});
-
-// Lightweight client log sink for Phase 1 measurements
-app.post('/log', (req, res) => {
-  try {
-    const { roomId, events } = req.body || {};
-    if (Array.isArray(events) && events.length) {
-      console.log('[client-log]', { roomId, count: events.length });
-      for (const e of events) {
-        console.log('  ', JSON.stringify(e));
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-  res.sendStatus(204);
 });
 
 app.use(rollbar.errorHandler());

@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",
     "express": "^4.19.2",
+    "morgan": "^1.10.1",
     "nanohtml": "^1.10.0",
     "rollbar": "^2.26.4",
     "tailwindcss": "^4.1.13",
