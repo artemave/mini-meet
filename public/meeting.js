@@ -311,7 +311,7 @@ function updateOverlayPinch() {
   clampOverlayToBounds();
 }
 
-let pc;
+let pcReady
 const logs = [];
 function log(type, data) {
   const entry = { t: new Date().toISOString(), type, data };
@@ -354,6 +354,7 @@ async function start() {
     for (const videoEl of localVideos) {
       videoEl.srcObject = localStream;
     }
+    const pc = await pcReady;
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
     updateMicButton();
     updateCamButton();
@@ -420,18 +421,24 @@ function connectWebSocket() {
 connectWebSocket();
 
 async function setupPeerConnection() {
-  if (pc) {
-    try {
-      pc.ontrack = null;
-      pc.onicecandidate = null;
-      pc.onicegatheringstatechange = null;
-      pc.oniceconnectionstatechange = null;
-      pc.onconnectionstatechange = null;
-      pc.onsignalingstatechange = null;
-      pc.close();
-    } catch (_) {}
-    pc = null;
+  let resolvePcReady;
+  const oldPcReady = pcReady;
+  pcReady = new Promise((resolve) => {
+    resolvePcReady = resolve;
+  });
+
+  // Clean up old connection if it exists
+  if (oldPcReady) {
+    const oldPc = await oldPcReady;
+    oldPc.ontrack = null;
+    oldPc.onicecandidate = null;
+    oldPc.onicegatheringstatechange = null;
+    oldPc.oniceconnectionstatechange = null;
+    oldPc.onconnectionstatechange = null;
+    oldPc.onsignalingstatechange = null;
+    oldPc.close();
   }
+
   const iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
   const resp = await fetch('/turn', { cache: 'no-store' });
   const data = await resp.json();
@@ -439,12 +446,12 @@ async function setupPeerConnection() {
     iceServers.push(...data.iceServers);
   }
 
-  pc = new RTCPeerConnection({ iceServers });
+  const pc = new RTCPeerConnection({ iceServers });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
     if (remoteVideo && remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
-      remoteVideo.play().catch(e => {
+      remoteVideo.play().catch(_ => {
         remotePlayButtonOverlay.classList.remove('hidden')
       })
     }
@@ -488,15 +495,19 @@ async function setupPeerConnection() {
   if (localStream) {
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
   }
+
+  resolvePcReady(pc);
 }
 
 async function makeOffer() {
+  const pc = await pcReady;
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   send('offer', offer);
 }
 
 async function onOffer(offer) {
+  const pc = await pcReady;
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
@@ -504,10 +515,12 @@ async function onOffer(offer) {
 }
 
 async function onAnswer(answer) {
+  const pc = await pcReady;
   await pc.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
 async function onCandidate(candidate) {
+  const pc = await pcReady;
   await pc.addIceCandidate(new RTCIceCandidate(candidate));
 }
 
