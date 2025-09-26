@@ -50,10 +50,24 @@ export default function meetingView({ roomId }) {
           >
             <video
               data-remote-video
-              autoplay
               playsinline
               class="h-full w-full object-cover"
             ></video>
+            <div
+              id="remote-play-overlay"
+              class="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10 hidden"
+            >
+              <button
+                id="remote-play-button"
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-emerald-950 shadow-lg hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                Join
+              </button>
+            </div>
             <div
               class="absolute aspect-[9/12] w-24 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
               data-self-overlay

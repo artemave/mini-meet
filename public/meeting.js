@@ -8,6 +8,8 @@ const remoteVideo = document.querySelector('[data-remote-video]');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
 const copyToast = document.getElementById('copy-toast');
+const remotePlayButton = document.getElementById('remote-play-button')
+const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
 let reconnectTimer;
 let isShuttingDown = false;
 let lastReconnectAttempt = 0;
@@ -358,21 +360,10 @@ let localStream;
 let isInitiator = false;
 
 async function start() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    setStatus('Needs HTTPS or localhost', 'bad');
-    log('error', 'mediaDevices unavailable (insecure context)');
-    return;
-  }
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     for (const videoEl of localVideos) {
-      if (!videoEl) continue;
       videoEl.srcObject = localStream;
-      try {
-        videoEl.play();
-      } catch (_) {
-        // Autoplay might be blocked until the user interacts; ignore.
-      }
     }
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
     updateMicButton();
@@ -380,6 +371,8 @@ async function start() {
   } catch (err) {
     setStatus('Camera/mic error', 'bad');
     log('getUserMediaError', { name: err?.name, message: err?.message });
+
+    throw err
   }
 }
 
@@ -468,6 +461,9 @@ async function setupPeerConnection() {
   pc.ontrack = (e) => {
     if (remoteVideo && remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
+      remoteVideo.play().catch(e => {
+        remotePlayButtonOverlay.classList.remove('hidden')
+      })
     }
   };
   pc.onicecandidate = (e) => {
@@ -589,6 +585,12 @@ toggleCam?.addEventListener('click', () => {
   const enabled = localStream.getVideoTracks().every((t) => t.enabled);
   localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
   updateCamButton();
+});
+
+remotePlayButton.addEventListener('click', () => {
+  remoteVideo.play().then(() => {
+    remotePlayButtonOverlay.classList.add('hidden')
+  });
 });
 
 if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
