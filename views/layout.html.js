@@ -17,21 +17,7 @@ export default function layout({
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <title>${title}</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-          tailwind.config = {
-            theme: {
-              extend: {
-                fontFamily: {
-                  sans: ['Inter', 'system-ui', 'sans-serif'],
-                },
-                boxShadow: {
-                  emeraldGlow: '0 25px 50px -20px rgba(34, 197, 94, 0.35)',
-                },
-              },
-            },
-          };
-        </script>
+        <link rel="stylesheet" href="/styles.css" />
         <meta name="theme-color" content="#0f172a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

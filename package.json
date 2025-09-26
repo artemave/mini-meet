@@ -6,12 +6,15 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "NODE_ENV=development node --watch src/server.js"
+    "dev": "NODE_ENV=development node --watch src/server.js",
+    "build": "npx @tailwindcss/cli -i ./src/styles.css -o ./public/styles.css"
   },
   "dependencies": {
+    "@tailwindcss/cli": "^4.1.13",
     "express": "^4.19.2",
     "nanohtml": "^1.10.0",
     "rollbar": "^2.26.4",
+    "tailwindcss": "^4.1.13",
     "ws": "^8.18.0"
   }
 }

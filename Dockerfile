@@ -12,5 +12,7 @@ COPY public ./public
 
 ENV NODE_ENV=production
 
+RUN node --run build
+
 # Start the server (Dokku sets PORT at runtime)
 CMD ["node", "src/server.js"]

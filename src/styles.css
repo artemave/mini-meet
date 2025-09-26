@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@theme {
+  --font-family-sans: Inter, system-ui, sans-serif;
+  --shadow-emerald-glow: 0 25px 50px -20px rgba(34, 197, 94, 0.35);
+}

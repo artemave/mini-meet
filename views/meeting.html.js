@@ -226,8 +226,8 @@ export default function meetingView({ roomId }) {
           <span class="sr-only">Leave meeting</span>
         </a>
       </footer>
-      <script src="/meeting.js" type="module"></script>
     </div>
+    <script src="/meeting.js" type="module"></script>
   `;
 
   return layout({ title: `Meeting - ${roomId}`, body });
