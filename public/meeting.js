@@ -73,23 +73,21 @@ function scheduleReconnect(reason) {
 
   if (timeSinceLastAttempt >= RECONNECT_THROTTLE) {
     lastReconnectAttempt = now;
-    restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
+    restartConnection(reason)
   } else {
     const delay = RECONNECT_THROTTLE - timeSinceLastAttempt;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       lastReconnectAttempt = Date.now();
-      restartConnection(reason).catch((err) => log('reconnect_error', { reason, message: err?.message }));
+      restartConnection(reason)
     }, delay);
   }
 }
 
 async function restartConnection(reason) {
   if (isShuttingDown) return;
-  log('reconnect_attempt', { reason, initiator: isInitiator });
   clearReconnectTimer();
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    log('reconnect_ws_closed', { state: ws?.readyState });
     connectWebSocket();
     return;
   }
@@ -308,12 +306,6 @@ function updateOverlayPinch() {
 }
 
 let pcReady
-const logs = [];
-function log(type, data) {
-  const entry = { t: new Date().toISOString(), type, data };
-  logs.push(entry);
-  console.debug('[webrtc]', type, data);
-}
 
 function setStatus(key, mode) {
   if (!statusEl) return;
@@ -355,7 +347,6 @@ async function start() {
     updateCamButton();
   } catch (err) {
     setStatus('camera_mic_error', 'bad');
-    log('getUserMediaError', { name: err?.name, message: err?.message });
 
     throw err
   }
@@ -455,15 +446,10 @@ async function setupPeerConnection() {
     if (e.candidate) {
       const parts = e.candidate.candidate.split(' typ ');
       const type = (parts[1] || '').split(' ')[0];
-      log('candidate', { candidateType: type });
       send('candidate', e.candidate);
     }
   };
-  pc.onicegatheringstatechange = () => {
-    log('iceGatheringState', pc.iceGatheringState);
-  };
   pc.oniceconnectionstatechange = () => {
-    log('iceConnectionState', pc.iceConnectionState);
     if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
       clearReconnectTimer();
       setStatus('connected', 'ok');
@@ -481,11 +467,7 @@ async function setupPeerConnection() {
     }
   };
   pc.onconnectionstatechange = () => {
-    log('connectionState', pc.connectionState);
     if (pc.connectionState === 'failed') scheduleReconnect('connection-failed');
-  };
-  pc.onsignalingstatechange = () => {
-    log('signalingState', pc.signalingState);
   };
   if (localStream) {
     localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
@@ -597,16 +579,9 @@ if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
   }
 }
 
-// Send logs to server periodically and on unload
-function flushLogs(reason) {
-  if (!logs.length) return;
-  const payload = JSON.stringify({ roomId, reason, events: logs.splice(0, logs.length) });
-  navigator.sendBeacon('/log', payload);
-}
-setInterval(() => flushLogs('interval'), 10000);
 window.addEventListener('pagehide', markShuttingDown);
+
 window.addEventListener('beforeunload', () => {
   markShuttingDown();
   try { send('bye'); } catch (_) {}
-  flushLogs('unload');
 });
