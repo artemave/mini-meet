@@ -29,10 +29,6 @@ const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window
 
 localStorage.setItem('mini-meet:last-room', roomId);
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
-}
-
 roomEl.textContent = `Room: ${roomId}`;
 
 copyBtn.addEventListener('click', async () => {
