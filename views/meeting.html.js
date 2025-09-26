@@ -93,7 +93,6 @@ export default function meetingView({ roomId }) {
           class="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/95 px-3 py-1.5 text-xs font-semibold text-slate-100 shadow-lg shadow-emerald-500/20 opacity-0 transition duration-200 ease-out md:-top-16"
           role="status"
           aria-live="polite"
-          hidden
         >
           Link copied to clipboard
         </div>

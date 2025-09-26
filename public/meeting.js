@@ -27,23 +27,15 @@ let overlayAspectRatio = PORTRAIT_OVERLAY_ASPECT;
 const MIN_OVERLAY_WIDTH = 80;
 const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(orientation: portrait)') : null;
 
-try {
-  localStorage.setItem('mini-meet:last-room', roomId);
-} catch (_) {
-  // ignore storage errors (private mode, etc.)
-}
+localStorage.setItem('mini-meet:last-room', roomId);
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker
-    .register('/sw.js')
-    .catch((err) => console.warn('SW registration failed', err));
+  navigator.serviceWorker.register('/sw.js')
 }
 
-if (roomEl) {
-  roomEl.textContent = `Room: ${roomId}`;
-}
+roomEl.textContent = `Room: ${roomId}`;
 
-copyBtn?.addEventListener('click', async () => {
+copyBtn.addEventListener('click', async () => {
   try {
     if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unsupported');
     await navigator.clipboard.writeText(location.href);
@@ -56,12 +48,9 @@ copyBtn?.addEventListener('click', async () => {
 let copyToastVisibleTimer;
 let copyToastResetTimer;
 function showCopyToast() {
-  if (!copyToast) return;
   clearTimeout(copyToastVisibleTimer);
   clearTimeout(copyToastResetTimer);
-  copyToast.hidden = false;
-  // Force reflow so transition runs after removing hidden
-  void copyToast.offsetWidth;
+
   copyToast.classList.remove('opacity-0');
   copyToast.classList.add('opacity-100');
   copyToastVisibleTimer = setTimeout(() => {
@@ -189,7 +178,7 @@ function handleOverlayPointerDown(event) {
       maxTop: Math.max(0, overlayBoundary.clientHeight - selfOverlay.offsetHeight),
     };
   }
-  try { selfOverlay.setPointerCapture(event.pointerId); } catch (_) {}
+  selfOverlay.setPointerCapture(event.pointerId)
   event.preventDefault();
 }
 
@@ -224,11 +213,11 @@ function handleOverlayPointerUp(event) {
     }
   }
   if (overlayDragState && event.pointerId === overlayDragState.pointerId) {
-    try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
+    selfOverlay.releasePointerCapture(event.pointerId)
     overlayDragState = null;
     shouldClamp = true;
   } else {
-    try { selfOverlay.releasePointerCapture(event.pointerId); } catch (_) {}
+    selfOverlay.releasePointerCapture(event.pointerId)
   }
   if (shouldClamp) clampOverlayToBounds();
 }
@@ -395,7 +384,6 @@ function connectWebSocket() {
     switch (msg.type) {
       case 'room_full':
         setStatus('room is full', 'bad');
-        alert('This room already has 2 participants.');
         try { ws.close(); } catch {}
         return;
       case 'welcome':
@@ -445,17 +433,12 @@ async function setupPeerConnection() {
     pc = null;
   }
   const iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-  try {
-    const resp = await fetch('/turn', { cache: 'no-store' });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (Array.isArray(data.iceServers) && data.iceServers.length) {
-        iceServers.push(...data.iceServers);
-      }
-    }
-  } catch (_) {
-    // ignore and fallback to STUN only
+  const resp = await fetch('/turn', { cache: 'no-store' });
+  const data = await resp.json();
+  if (Array.isArray(data.iceServers) && data.iceServers.length) {
+    iceServers.push(...data.iceServers);
   }
+
   pc = new RTCPeerConnection({ iceServers });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
@@ -525,11 +508,7 @@ async function onAnswer(answer) {
 }
 
 async function onCandidate(candidate) {
-  try {
-    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-  } catch (e) {
-    console.error('Error adding ICE candidate', e);
-  }
+  await pc.addIceCandidate(new RTCIceCandidate(candidate));
 }
 
 function send(type, payload) {
@@ -606,11 +585,7 @@ if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
   window.addEventListener('orientationchange', reflowOverlay);
   if (orientationQuery) {
     const orientationHandler = () => syncOverlayAspectForOrientation();
-    if (typeof orientationQuery.addEventListener === 'function') {
-      orientationQuery.addEventListener('change', orientationHandler);
-    } else if (typeof orientationQuery.addListener === 'function') {
-      orientationQuery.addListener(orientationHandler);
-    }
+    orientationQuery.addEventListener('change', orientationHandler);
   }
 }
 
@@ -618,11 +593,7 @@ if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
 function flushLogs(reason) {
   if (!logs.length) return;
   const payload = JSON.stringify({ roomId, reason, events: logs.splice(0, logs.length) });
-  try {
-    navigator.sendBeacon('/log', payload);
-  } catch (_) {
-    // ignore
-  }
+  navigator.sendBeacon('/log', payload);
 }
 setInterval(() => flushLogs('interval'), 10000);
 window.addEventListener('pagehide', markShuttingDown);
