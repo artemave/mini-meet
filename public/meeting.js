@@ -314,31 +314,30 @@ function log(type, data) {
   logs.push(entry);
   console.debug('[webrtc]', type, data);
 }
-function setStatus(text, mode) {
+
+function setStatus(key, mode) {
   if (!statusEl) return;
-  const key = (text || '').toLowerCase();
   const labels = {
     waiting: 'Waiting for peer',
     connecting: 'Waiting for peer',
     connected: 'Connected',
     failed: 'Connection failed',
     disconnected: 'Disconnected',
-    idle: 'Idle',
-    'room is full': 'Room is full',
-    'needs https or localhost': 'HTTPS required',
-    'camera/mic error': 'Camera/mic error',
+    room_is_full: 'Room is full',
+    camera_mic_error: 'Camera/mic error',
   };
-  const baseLabel = labels[key] || text || 'Idle';
-  statusEl.textContent = baseLabel;
+  const label = labels[key]
+  if (!label) {
+    throw new Error(`Unknown status ${key}`)
+  }
+  statusEl.textContent = label;
 
   const variants = {
     ok: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_14px_rgba(34,197,94,0.45)] animate-none',
     bad: 'border-rose-400/40 bg-rose-500/20 text-rose-100 animate-none',
     waiting: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_16px_rgba(34,197,94,0.5)] animate-pulse',
   };
-  const fallback = 'border-white/10 bg-slate-900/70 text-slate-200 animate-none';
-  statusEl.className = `${statusBaseClasses} ${variants[mode] || fallback}`.trim();
-
+  statusEl.className = `${statusBaseClasses} ${variants[mode]}`.trim();
 }
 
 let localStream;
@@ -355,7 +354,7 @@ async function start() {
     updateMicButton();
     updateCamButton();
   } catch (err) {
-    setStatus('Camera/mic error', 'bad');
+    setStatus('camera_mic_error', 'bad');
     log('getUserMediaError', { name: err?.name, message: err?.message });
 
     throw err
@@ -380,7 +379,7 @@ function connectWebSocket() {
     const msg = JSON.parse(event.data);
     switch (msg.type) {
       case 'room_full':
-        setStatus('room is full', 'bad');
+        setStatus('room_is_full', 'bad');
         try { ws.close(); } catch {}
         return;
       case 'welcome':
