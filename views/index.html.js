@@ -51,7 +51,7 @@ export default function indexView() {
           </p>
         </section>
       </main>
-      <script src="/index.js" type="module"></script>
+      <script src="/index.js"></script>
     </div>
   `;
 
