@@ -95,9 +95,7 @@ async function restartConnection(reason) {
     return;
   }
   await setupPeerConnection();
-  if (!localStream) {
-    await start();
-  }
+
   setStatus('waiting', 'waiting');
   if (isInitiator) {
     await makeOffer();
@@ -338,14 +336,12 @@ function setStatus(key, mode) {
 let localStream;
 let isInitiator = false;
 
-async function start() {
+async function startLocalMedia() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     for (const videoEl of localVideos) {
       videoEl.srcObject = localStream;
     }
-    const pc = await pcReady;
-    localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
     updateMicButton();
     updateCamButton();
   } catch (err) {
@@ -379,7 +375,6 @@ function connectWebSocket() {
       case 'welcome':
         isInitiator = !!msg.initiator;
         await setupPeerConnection();
-        await start();
         if (!isInitiator) send('ready');
         break;
       case 'ready':
@@ -407,7 +402,7 @@ function connectWebSocket() {
   };
 }
 
-connectWebSocket();
+startLocalMedia().then(connectWebSocket)
 
 async function setupPeerConnection() {
   let resolvePcReady;
@@ -467,9 +462,8 @@ async function setupPeerConnection() {
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === 'failed') scheduleReconnect('connection-failed');
   };
-  if (localStream) {
-    localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-  }
+
+  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
 
   resolvePcReady(pc);
 }
