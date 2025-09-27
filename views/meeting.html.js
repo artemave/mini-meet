@@ -50,6 +50,7 @@ export default function meetingView({ roomId }) {
           >
             <video
               data-remote-video
+              autoplay
               playsinline
               class="h-full w-full object-cover"
             ></video>

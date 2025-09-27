@@ -13,7 +13,7 @@ const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
 let reconnectTimer;
 let isShuttingDown = false;
 let lastReconnectAttempt = 0;
-const RECONNECT_THROTTLE = 200;
+const RECONNECT_THROTTLE = 100;
 const selfOverlay = document.querySelector('[data-self-overlay]');
 const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
@@ -85,8 +85,11 @@ function scheduleReconnect(reason) {
 }
 
 async function restartConnection(reason) {
+  console.debug(`restartConnection: ${reason}`)
+
   if (isShuttingDown) return;
   clearReconnectTimer();
+
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     connectWebSocket();
     return;
@@ -437,15 +440,10 @@ async function setupPeerConnection() {
   pc.ontrack = (e) => {
     if (remoteVideo && remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
-      remoteVideo.play().catch(_ => {
-        remotePlayButtonOverlay.classList.remove('hidden')
-      })
     }
   };
   pc.onicecandidate = (e) => {
     if (e.candidate) {
-      const parts = e.candidate.candidate.split(' typ ');
-      const type = (parts[1] || '').split(' ')[0];
       send('candidate', e.candidate);
     }
   };
@@ -555,6 +553,14 @@ toggleCam?.addEventListener('click', () => {
   localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
   updateCamButton();
 });
+
+remoteVideo.addEventListener('error', (e) => {
+  console.error('remote video error', e);
+
+  if (e?.message && e.message.includes('play() can only be initiated by a user gesture')) {
+    remotePlayButtonOverlay.classList.remove('hidden');
+  }
+})
 
 remotePlayButton.addEventListener('click', () => {
   remoteVideo.play().then(() => {
