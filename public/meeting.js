@@ -402,8 +402,6 @@ function connectWebSocket() {
   };
 }
 
-startLocalMedia().then(connectWebSocket)
-
 async function setupPeerConnection() {
   let resolvePcReady;
   const oldPcReady = pcReady;
@@ -585,3 +583,7 @@ window.addEventListener('beforeunload', () => {
   markShuttingDown();
   try { send('bye'); } catch (_) {}
 });
+
+window.addEventListener('load', () => {
+  startLocalMedia().then(connectWebSocket)
+})
