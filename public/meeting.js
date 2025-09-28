@@ -42,19 +42,14 @@ copyBtn.addEventListener('click', async () => {
 });
 
 let copyToastVisibleTimer;
-let copyToastResetTimer;
 function showCopyToast() {
   clearTimeout(copyToastVisibleTimer);
-  clearTimeout(copyToastResetTimer);
 
   copyToast.classList.remove('opacity-0');
   copyToast.classList.add('opacity-100');
   copyToastVisibleTimer = setTimeout(() => {
     copyToast.classList.remove('opacity-100');
     copyToast.classList.add('opacity-0');
-    copyToastResetTimer = setTimeout(() => {
-      if (copyToast) copyToast.hidden = true;
-    }, 220);
   }, 1600);
 }
 
