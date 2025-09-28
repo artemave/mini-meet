@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "NODE_ENV=development node --watch src/server.js",
+    "dev": "NODE_ENV=development node --watch-path=./src --watch-preserve-output ./src/server.js",
     "build": "npx @tailwindcss/cli -i ./src/styles.css -o ./public/styles.css"
   },
   "dependencies": {

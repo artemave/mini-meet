@@ -7,8 +7,8 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
 import Rollbar from 'rollbar';
-import indexView from '../views/index.html.js';
-import meetingView from '../views/meeting.html.js';
+import indexView from './views/index.html.js';
+import meetingView from './views/meeting.html.js';
 import morgan from 'morgan'
 
 // Basic Express server + WS signaling for 1:1 rooms.
