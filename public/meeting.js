@@ -27,22 +27,14 @@ const LANDSCAPE_OVERLAY_ASPECT = 9 / 16;
 let overlayAspectRatio = PORTRAIT_OVERLAY_ASPECT;
 const MIN_OVERLAY_WIDTH = 80;
 const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(orientation: portrait)') : null;
-
-localStorage.setItem('mini-meet:last-room', roomId);
-
-roomEl.textContent = `Room: ${roomId}`;
-
-copyBtn.addEventListener('click', async () => {
-  try {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unsupported');
-    await navigator.clipboard.writeText(location.href);
-    showCopyToast();
-  } catch (_) {
-    window.prompt('Copy meeting link:', location.href);
-  }
-});
-
 let copyToastVisibleTimer;
+let pcReady
+let localStream;
+let isInitiator = false;
+const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+let ws;
+
+
 function showCopyToast() {
   clearTimeout(copyToastVisibleTimer);
 
@@ -302,8 +294,6 @@ function updateOverlayPinch() {
   clampOverlayToBounds();
 }
 
-let pcReady
-
 function setStatus(key, mode) {
   if (!statusEl) return;
   const labels = {
@@ -329,9 +319,6 @@ function setStatus(key, mode) {
   statusEl.className = `${statusBaseClasses} ${variants[mode]}`.trim();
 }
 
-let localStream;
-let isInitiator = false;
-
 async function startLocalMedia() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -346,9 +333,6 @@ async function startLocalMedia() {
     throw err
   }
 }
-
-const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
-let ws;
 
 function connectWebSocket() {
   if (ws) {
@@ -512,6 +496,7 @@ function updateMicButton() {
   if (iconOn) iconOn.classList.toggle('hidden', !enabled);
   if (iconOff) iconOff.classList.toggle('hidden', enabled);
 }
+
 function updateCamButton() {
   if (!toggleCam) return;
   if (!localStream) return;
@@ -527,20 +512,6 @@ function updateCamButton() {
   if (iconOn) iconOn.classList.toggle('hidden', !enabled);
   if (iconOff) iconOff.classList.toggle('hidden', enabled);
 }
-
-toggleMic?.addEventListener('click', () => {
-  if (!localStream) return;
-  const enabled = localStream.getAudioTracks().every((t) => t.enabled);
-  localStream.getAudioTracks().forEach((t) => (t.enabled = !enabled));
-  updateMicButton();
-});
-
-toggleCam?.addEventListener('click', () => {
-  if (!localStream) return;
-  const enabled = localStream.getVideoTracks().every((t) => t.enabled);
-  localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
-  updateCamButton();
-});
 
 async function swapCameraFacing() {
   if (!localStream) return;
@@ -586,46 +557,79 @@ async function swapCameraFacing() {
   newStream.getAudioTracks().forEach(track => track.stop());
 }
 
-swapCamera.addEventListener('click', swapCameraFacing);
-
-remoteVideo.addEventListener('error', (e) => {
-  console.error('remote video error', e);
-
-  if (e?.message && e.message.includes('play() can only be initiated by a user gesture')) {
-    remotePlayButtonOverlay.classList.remove('hidden');
-  }
-})
-
-remotePlayButton.addEventListener('click', () => {
-  remoteVideo.play().then(() => {
-    remotePlayButtonOverlay.classList.add('hidden')
-  });
-});
-
-if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
-  const reflowOverlay = () => requestAnimationFrame(() => syncOverlayAspectForOrientation());
-  requestAnimationFrame(() => {
-    initializeOverlayPosition();
-  });
-  selfOverlay.addEventListener('pointerdown', handleOverlayPointerDown, { passive: false });
-  selfOverlay.addEventListener('pointermove', handleOverlayPointerMove, { passive: false });
-  selfOverlay.addEventListener('pointerup', handleOverlayPointerUp);
-  selfOverlay.addEventListener('pointercancel', handleOverlayPointerUp);
-  window.addEventListener('resize', reflowOverlay);
-  window.addEventListener('orientationchange', reflowOverlay);
-  if (orientationQuery) {
-    const orientationHandler = () => syncOverlayAspectForOrientation();
-    orientationQuery.addEventListener('change', orientationHandler);
-  }
-}
-
-window.addEventListener('pagehide', markShuttingDown);
-
-window.addEventListener('beforeunload', () => {
-  markShuttingDown();
-  try { send('bye'); } catch (_) {}
-});
-
 window.addEventListener('load', () => {
+  if (window.meetingJsLoaded) {
+    return
+  }
+  window.meetingJsLoaded = true
+
+  swapCamera.addEventListener('click', swapCameraFacing);
+
+  remoteVideo.addEventListener('error', (e) => {
+    console.error('remote video error', e);
+
+    if (e?.message && e.message.includes('play() can only be initiated by a user gesture')) {
+      remotePlayButtonOverlay.classList.remove('hidden');
+    }
+  })
+
+  remotePlayButton.addEventListener('click', () => {
+    remoteVideo.play().then(() => {
+      remotePlayButtonOverlay.classList.add('hidden')
+    });
+  });
+
+  if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
+    const reflowOverlay = () => requestAnimationFrame(() => syncOverlayAspectForOrientation());
+    requestAnimationFrame(() => {
+      initializeOverlayPosition();
+    });
+    selfOverlay.addEventListener('pointerdown', handleOverlayPointerDown, { passive: false });
+    selfOverlay.addEventListener('pointermove', handleOverlayPointerMove, { passive: false });
+    selfOverlay.addEventListener('pointerup', handleOverlayPointerUp);
+    selfOverlay.addEventListener('pointercancel', handleOverlayPointerUp);
+    window.addEventListener('resize', reflowOverlay);
+    window.addEventListener('orientationchange', reflowOverlay);
+    if (orientationQuery) {
+      const orientationHandler = () => syncOverlayAspectForOrientation();
+      orientationQuery.addEventListener('change', orientationHandler);
+    }
+  }
+
+  window.addEventListener('pagehide', markShuttingDown);
+
+  window.addEventListener('beforeunload', () => {
+    markShuttingDown();
+    try { send('bye'); } catch (_) {}
+  });
+
+  localStorage.setItem('mini-meet:last-room', roomId);
+
+  roomEl.textContent = `Room: ${roomId}`;
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unsupported');
+      await navigator.clipboard.writeText(location.href);
+      showCopyToast();
+    } catch (_) {
+      window.prompt('Copy meeting link:', location.href);
+    }
+  });
+
+  toggleMic.addEventListener('click', () => {
+    if (!localStream) return;
+    const enabled = localStream.getAudioTracks().every((t) => t.enabled);
+    localStream.getAudioTracks().forEach((t) => (t.enabled = !enabled));
+    updateMicButton();
+  });
+
+  toggleCam.addEventListener('click', () => {
+    if (!localStream) return;
+    const enabled = localStream.getVideoTracks().every((t) => t.enabled);
+    localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
+    updateCamButton();
+  });
+
   startLocalMedia().then(connectWebSocket)
 })
