@@ -427,9 +427,16 @@ async function setupPeerConnection() {
   }
   const resp = await fetch('/turn', { cache: 'no-store' });
   const data = await resp.json();
-  if (Array.isArray(data.iceServers) && data.iceServers.length) {
-    iceServers.push(...data.iceServers);
-  }
+  data.iceServers.forEach(iceServer => {
+    if (isLikelyRussianUser()) {
+      iceServers.push({
+        ...iceServer,
+        ...{ urls: iceServer.urls.filter(url => !url.match('transport=udp')) }
+      })
+    } else {
+      iceServers.push(iceServer)
+    }
+  })
 
   const pc = new RTCPeerConnection({ iceServers });
   setStatus('waiting', 'waiting');
