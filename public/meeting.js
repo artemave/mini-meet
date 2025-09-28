@@ -14,7 +14,7 @@ const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
 let reconnectTimer;
 let isShuttingDown = false;
 let lastReconnectAttempt = 0;
-const RECONNECT_THROTTLE = 100;
+const RECONNECT_THROTTLE = 10;
 const selfOverlay = document.querySelector('[data-self-overlay]');
 const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
