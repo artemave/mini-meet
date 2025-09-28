@@ -7,6 +7,7 @@ const localVideos = Array.from(document.querySelectorAll('[data-local-video]'));
 const remoteVideo = document.querySelector('[data-remote-video]');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
+const swapCamera = document.getElementById('swap-camera');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
 const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
@@ -540,6 +541,52 @@ toggleCam?.addEventListener('click', () => {
   localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
   updateCamButton();
 });
+
+async function swapCameraFacing() {
+  if (!localStream) return;
+
+  const videoTracks = localStream.getVideoTracks();
+  if (videoTracks.length === 0) return;
+
+  const currentTrack = videoTracks[0];
+  const currentFacingMode = currentTrack.getSettings().facingMode;
+  const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+
+  // Stop current video track
+  currentTrack.stop();
+
+  // Get new stream with different camera
+  const newStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: newFacingMode },
+    audio: true
+  });
+
+  // Replace video track in existing stream
+  const newVideoTrack = newStream.getVideoTracks()[0];
+  const audioTracks = localStream.getAudioTracks();
+
+  // Create new stream with new video track and existing audio tracks
+  localStream = new MediaStream([newVideoTrack, ...audioTracks]);
+
+  // Update video elements
+  for (const videoEl of localVideos) {
+    videoEl.srcObject = localStream;
+  }
+
+  // Update peer connection if it exists
+  if (pcReady) {
+    const pc = await pcReady;
+    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender) {
+      await sender.replaceTrack(newVideoTrack);
+    }
+  }
+
+  // Stop the temporary audio track from new stream since we're keeping the original
+  newStream.getAudioTracks().forEach(track => track.stop());
+}
+
+swapCamera.addEventListener('click', swapCameraFacing);
 
 remoteVideo.addEventListener('error', (e) => {
   console.error('remote video error', e);
