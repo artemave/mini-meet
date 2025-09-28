@@ -127,7 +127,7 @@ export default function meetingView({ roomId }) {
           type="button"
           data-state="on"
           aria-label="Mute microphone"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 data-[state=off]:border-slate-600/60 data-[state=off]:bg-none data-[state=off]:bg-slate-800/90 data-[state=off]:text-slate-100 data-[state=off]:shadow-none"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 data-[state=off]:border-slate-600/60 data-[state=off]:bg-none data-[state=off]:bg-slate-800/90 data-[state=off]:text-slate-100 data-[state=off]:shadow-none hover:-translate-y-0.5"
         >
           <svg
             data-icon="mic-on"
@@ -155,12 +155,9 @@ export default function meetingView({ roomId }) {
             stroke-linejoin="round"
             class="hidden h-5 w-5"
           >
-            <path d="M15 9.75V6a3 3 0 10-6 0v1.5" />
-            <path d="M9 12.75V12a3 3 0 003-3" />
-            <path d="M19.5 12a7.5 7.5 0 01-4.522 6.864" />
-            <path d="M12 18.75v2.25" />
-            <path d="M12 21h3" />
-            <path d="M4.5 12a7.5 7.5 0 007.5 7.5h.75" />
+            <path d="M12 18a4 4 0 004-4V6a4 4 0 10-8 0v8a4 4 0 004 4z" />
+            <path d="M19.5 10.5a7.5 7.5 0 01-15 0" />
+            <path d="M12 18v3m0 0H9m3 0h3" />
             <path d="M3 3l18 18" />
           </svg>
           <span class="sr-only" data-label>Mute microphone</span>
@@ -170,7 +167,7 @@ export default function meetingView({ roomId }) {
           type="button"
           data-state="on"
           aria-label="Stop video"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 data-[state=off]:border-slate-600/60 data-[state=off]:bg-none data-[state=off]:bg-slate-800/90 data-[state=off]:text-slate-100 data-[state=off]:shadow-none"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 data-[state=off]:border-slate-600/60 data-[state=off]:bg-none data-[state=off]:bg-slate-800/90 data-[state=off]:text-slate-100 data-[state=off]:shadow-none hover:-translate-y-0.5"
         >
           <svg
             data-icon="cam-on"
@@ -197,11 +194,9 @@ export default function meetingView({ roomId }) {
             stroke-linejoin="round"
             class="hidden h-5 w-5"
           >
-            <path d="M21 16.5l-4.2-2.4" />
+            <path d="M15 10.5l3.553-2.132A1 1 0 0120 9.24v5.52a1 1 0 01-1.447.872L15 13.5" />
+            <rect x="3" y="6" width="12" height="12" rx="2.25" />
             <path d="M3 3l18 18" />
-            <path d="M9.75 9.75L3 6.75" />
-            <path d="M12 18.75h-6A2.25 2.25 0 013.75 16.5v-9a2.25 2.25 0 013.402-1.947" />
-            <path d="M15 13.5v3a2.25 2.25 0 01-2.25 2.25" />
           </svg>
           <span class="sr-only" data-label>Stop video</span>
         </button>
