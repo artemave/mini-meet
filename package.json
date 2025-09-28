@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "NODE_ENV=development node --watch-path=./src --watch-preserve-output ./src/server.js",
+    "dev": "concurrently 'node --run watch-server' 'node --run watch-build'",
+    "watch-server": "NODE_ENV=development node --watch-path=./src --watch-preserve-output ./src/server.js",
+    "watch-build": "npx @tailwindcss/cli -w -i ./src/styles.css -o ./public/styles.css",
     "build": "npx @tailwindcss/cli -i ./src/styles.css -o ./public/styles.css"
   },
   "dependencies": {
@@ -17,5 +19,8 @@
     "rollbar": "^2.26.4",
     "tailwindcss": "^4.1.13",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
