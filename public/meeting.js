@@ -438,10 +438,6 @@ async function setupPeerConnection() {
       setStatus('failed', 'bad');
       scheduleReconnect('ice-failed');
     }
-    if (pc.iceConnectionState === 'disconnected') {
-      setStatus('disconnected', 'bad');
-      scheduleReconnect('ice-disconnected');
-    }
     if (pc.iceConnectionState === 'closed') {
       scheduleReconnect('ice-closed');
     }
