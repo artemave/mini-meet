@@ -11,10 +11,8 @@ const swapCamera = document.getElementById('swap-camera');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
 const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
-let reconnectTimer;
+let isReconnecting = false;
 let isShuttingDown = false;
-let lastReconnectAttempt = 0;
-const RECONNECT_THROTTLE = 10;
 const selfOverlay = document.querySelector('[data-self-overlay]');
 const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
@@ -46,49 +44,32 @@ function showCopyToast() {
   }, 1600);
 }
 
-function clearReconnectTimer() {
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-}
-
 function scheduleReconnect(reason) {
-  if (isShuttingDown || reconnectTimer) return;
-
-  const now = Date.now();
-  const timeSinceLastAttempt = now - lastReconnectAttempt;
-
-  if (timeSinceLastAttempt >= RECONNECT_THROTTLE) {
-    lastReconnectAttempt = now;
-    restartConnection(reason)
-  } else {
-    const delay = RECONNECT_THROTTLE - timeSinceLastAttempt;
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      lastReconnectAttempt = Date.now();
-      restartConnection(reason)
-    }, delay);
-  }
+  if (isShuttingDown || isReconnecting) return;
+  isReconnecting = true;
+  restartConnection(reason);
 }
 
 async function restartConnection(reason) {
   console.debug(`restartConnection: ${reason}`)
 
-  if (isShuttingDown) return;
-  clearReconnectTimer();
+  try {
+    if (isShuttingDown) return;
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    connectWebSocket();
-    return;
-  }
-  await setupPeerConnection();
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      connectWebSocket();
+      return;
+    }
+    await setupPeerConnection();
 
-  setStatus('waiting', 'waiting');
-  if (isInitiator) {
-    await makeOffer();
-  } else {
-    send('ready');
+    setStatus('waiting', 'waiting');
+    if (isInitiator) {
+      await makeOffer();
+    } else {
+      send('ready');
+    }
+  } finally {
+    isReconnecting = false;
   }
 }
 
@@ -370,7 +351,6 @@ function connectWebSocket() {
         await onCandidate(msg.payload);
         break;
       case 'bye':
-        clearReconnectTimer();
         if (remoteVideo) {
           remoteVideo.srcObject = null;
         }
@@ -452,7 +432,6 @@ async function setupPeerConnection() {
   };
   pc.oniceconnectionstatechange = () => {
     if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-      clearReconnectTimer();
       setStatus('connected', 'ok');
     }
     if (pc.iceConnectionState === 'failed') {
@@ -508,7 +487,6 @@ function send(type, payload) {
 function markShuttingDown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  clearReconnectTimer();
 }
 
 function updateMicButton() {
