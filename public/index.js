@@ -79,6 +79,10 @@ function hydrateLastMeeting() {
 
 hydrateLastMeeting();
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+}
+
 window.addEventListener('storage', (event) => {
   if (event.key === STORAGE_KEY) hydrateLastMeeting();
 });
