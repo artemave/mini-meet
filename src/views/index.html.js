@@ -4,7 +4,7 @@ import layout from './layout.html.js';
 export default function indexView() {
   const body = html`
     <div
-      class="relative min-h-screen overflow-x-hidden bg-slate-950 font-sans text-slate-100"
+      class="relative min-h-screen bg-slate-950 font-sans text-slate-100"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden">
         <div

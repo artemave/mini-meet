@@ -4,7 +4,7 @@ import layout from './layout.html.js';
 export default function meetingView({ roomId }) {
   const body = html`
     <div
-      class="relative flex h-screen flex-col overflow-hidden bg-slate-950 font-sans text-slate-100 supports-[height:100dvh]:h-dvh"
+      class="relative flex h-screen flex-col bg-slate-950 font-sans text-slate-100 supports-[height:100dvh]:h-dvh"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden">
         <div
@@ -67,7 +67,7 @@ export default function meetingView({ roomId }) {
           Idle
         </span>
       </header>
-      <main class="relative z-10 flex flex-1 flex-col overflow-hidden px-0 pt-0 md:justify-center md:px-6 md:pb-6 md:pt-4">
+      <main class="relative z-10 flex flex-1 flex-col px-0 pt-0 md:justify-center md:px-6 md:pb-6 md:pt-4">
         <div
           id="video-container"
           data-layout="side-by-side"
@@ -75,26 +75,26 @@ export default function meetingView({ roomId }) {
         >
           <div
             id="local-video-container"
-            class="hidden w-full overflow-hidden rounded-2xl border border-slate-500/30 bg-slate-950 shadow-2xl shadow-emerald-500/20 md:block md:aspect-video"
+            class="hidden w-full rounded-2xl border border-slate-500/30 bg-slate-950 shadow-2xl shadow-emerald-500/20 md:block md:aspect-video"
           >
             <video
               data-local-video
               autoplay
               playsinline
               muted
-              class="h-full w-full object-cover"
+              class="h-full w-full object-cover rounded-2xl"
             ></video>
           </div>
           <div
             id="remote-video-container"
-            class="relative flex-1 min-h-0 w-full overflow-hidden rounded-none border-none bg-slate-950 shadow-none md:aspect-video md:h-auto md:overflow-hidden md:rounded-2xl md:border md:border-slate-500/30 md:shadow-2xl md:shadow-cyan-500/20"
+            class="relative flex-1 min-h-0 w-full rounded-none border-none bg-slate-950 shadow-none md:aspect-video md:h-auto md:rounded-2xl md:border md:border-slate-500/30 md:shadow-2xl md:shadow-cyan-500/20"
             data-overlay-boundary
           >
             <video
               data-remote-video
               autoplay
               playsinline
-              class="h-full w-full object-cover"
+              class="h-full w-full object-cover md:rounded-2xl"
             ></video>
             <div
               id="remote-play-overlay"
@@ -112,7 +112,7 @@ export default function meetingView({ roomId }) {
               </button>
             </div>
             <div
-              class="absolute aspect-[9/12] w-24 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
+              class="absolute aspect-[9/12] w-24 rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
               data-self-overlay
               data-mobile-overlay
               style="bottom:1rem; right:1rem; touch-action:none;"
@@ -122,7 +122,7 @@ export default function meetingView({ roomId }) {
                 autoplay
                 playsinline
                 muted
-                class="h-full w-full object-cover"
+                class="h-full w-full object-cover rounded-xl"
               ></video>
               <button
                 id="swap-camera"
@@ -151,7 +151,7 @@ export default function meetingView({ roomId }) {
             </div>
             <div
               id="desktop-overlay"
-              class="hidden md:hidden absolute aspect-video w-64 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60"
+              class="hidden md:hidden absolute aspect-video w-64 rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60"
               data-self-overlay
               data-desktop-overlay
               style="bottom:1rem; right:1rem; touch-action:none;"
@@ -161,7 +161,7 @@ export default function meetingView({ roomId }) {
                 autoplay
                 playsinline
                 muted
-                class="h-full w-full object-cover"
+                class="h-full w-full object-cover rounded-xl"
               ></video>
             </div>
           </div>
