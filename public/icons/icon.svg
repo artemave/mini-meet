@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00b4d8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06d6a0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" fill="url(#bgGradient)" rx="90"/>
+
+  <!-- Two M's - one slightly leaning on the other -->
+  <g>
+    <!-- First M - upright -->
+    <path d="M 90,180 L 90,360 L 135,360 L 135,250 L 185,340 L 235,250 L 235,360 L 280,360 L 280,180 L 210,180 L 185,230 L 160,180 Z"
+          fill="#1a202c" fill-opacity="0.5"/>
+
+    <!-- Second M - slightly tilted, leaning -->
+    <path d="M 232,180 L 232,360 L 277,360 L 277,250 L 327,340 L 377,250 L 377,360 L 422,360 L 422,180 L 352,180 L 327,230 L 302,180 Z"
+          fill="#0d1117" fill-opacity="0.85"
+          transform="rotate(5 327 270)"/>
+  </g>
+</svg>
