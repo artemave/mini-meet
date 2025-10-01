@@ -21,6 +21,44 @@ export default function meetingView({ roomId }) {
         <a class="text-lg font-semibold text-slate-100 md:text-xl" href="/">Mini Meet</a>
         <div id="room-id" class="hidden text-sm text-slate-400 md:block"></div>
         <div class="flex-1"></div>
+        <button
+          id="toggle-layout"
+          type="button"
+          aria-label="Toggle layout"
+          title="Toggle layout"
+          class="hidden md:inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-slate-900/70 text-slate-300 transition hover:border-white/20 hover:bg-slate-800/90 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        >
+          <svg
+            data-icon="layout-grid"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-4 w-4"
+          >
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <svg
+            data-icon="layout-overlay"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="hidden h-4 w-4"
+          >
+            <rect x="2" y="2" width="20" height="20" rx="2" />
+            <rect x="13" y="13" width="8" height="8" rx="1" />
+          </svg>
+        </button>
         <span
           id="status"
           data-status-base="inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide text-slate-200 transition"
@@ -31,9 +69,12 @@ export default function meetingView({ roomId }) {
       </header>
       <main class="relative z-10 flex flex-1 flex-col overflow-hidden px-0 pt-0 md:justify-center md:px-6 md:pb-6 md:pt-4">
         <div
+          id="video-container"
+          data-layout="side-by-side"
           class="relative mx-auto flex w-full flex-1 flex-col gap-0 md:grid md:grid-cols-2 md:gap-6 md:flex-none md:my-auto"
         >
           <div
+            id="local-video-container"
             class="hidden w-full overflow-hidden rounded-2xl border border-slate-500/30 bg-slate-950 shadow-2xl shadow-emerald-500/20 md:block md:aspect-video"
           >
             <video
@@ -45,6 +86,7 @@ export default function meetingView({ roomId }) {
             ></video>
           </div>
           <div
+            id="remote-video-container"
             class="relative flex-1 min-h-0 w-full overflow-hidden rounded-none border-none bg-slate-950 shadow-none md:aspect-video md:h-auto md:overflow-hidden md:rounded-2xl md:border md:border-slate-500/30 md:shadow-2xl md:shadow-cyan-500/20"
             data-overlay-boundary
           >
@@ -72,6 +114,7 @@ export default function meetingView({ roomId }) {
             <div
               class="absolute aspect-[9/12] w-24 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60 md:hidden lg:w-28"
               data-self-overlay
+              data-mobile-overlay
               style="bottom:1rem; right:1rem; touch-action:none;"
             >
               <video
@@ -105,6 +148,21 @@ export default function meetingView({ roomId }) {
                 </svg>
                 <span class="sr-only">Swap camera</span>
               </button>
+            </div>
+            <div
+              id="desktop-overlay"
+              class="hidden md:hidden absolute aspect-video w-64 overflow-hidden rounded-xl border border-slate-500/60 bg-slate-950/80 shadow-lg shadow-slate-900/60"
+              data-self-overlay
+              data-desktop-overlay
+              style="bottom:1rem; right:1rem; touch-action:none;"
+            >
+              <video
+                data-local-video
+                autoplay
+                playsinline
+                muted
+                class="h-full w-full object-cover"
+              ></video>
             </div>
           </div>
         </div>

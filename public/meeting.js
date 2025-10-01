@@ -16,8 +16,10 @@ const modalShareLinkBtn = document.getElementById('modal-share-link');
 const modalBrowserName = document.getElementById('browser-name');
 let isReconnecting = false;
 let isShuttingDown = false;
-const selfOverlay = document.querySelector('[data-self-overlay]');
-const overlayBoundary = selfOverlay ? selfOverlay.closest('[data-overlay-boundary]') : null;
+const mobileOverlay = document.querySelector('[data-mobile-overlay]');
+const desktopOverlay = document.getElementById('desktop-overlay');
+const selfOverlay = mobileOverlay;
+const overlayBoundary = mobileOverlay ? mobileOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
 let overlayDragState = null;
 let overlayInitialized = false;
@@ -25,8 +27,10 @@ const overlayPointers = selfOverlay ? new Map() : null;
 let overlayPinchState = null;
 const PORTRAIT_OVERLAY_ASPECT = 12 / 9;
 const LANDSCAPE_OVERLAY_ASPECT = 9 / 16;
+const DESKTOP_OVERLAY_ASPECT = 9 / 16;
 let overlayAspectRatio = PORTRAIT_OVERLAY_ASPECT;
 const MIN_OVERLAY_WIDTH = 80;
+const MIN_DESKTOP_OVERLAY_WIDTH = 120;
 const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(orientation: portrait)') : null;
 let copyToastVisibleTimer;
 let pcReady
@@ -34,6 +38,14 @@ let localStream;
 let isInitiator = false;
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
 let ws;
+const videoContainer = document.getElementById('video-container');
+const localVideoContainer = document.getElementById('local-video-container');
+const remoteVideoContainer = document.getElementById('remote-video-container');
+const toggleLayoutBtn = document.getElementById('toggle-layout');
+let desktopLayout = 'side-by-side'; // 'side-by-side' or 'overlay'
+let desktopOverlayDragState = null;
+let desktopOverlayInitialized = false;
+const desktopOverlayPointers = desktopOverlay ? new Map() : null;
 
 function detectUnsupportedBrowser() {
   const ua = navigator.userAgent || '';
@@ -360,6 +372,156 @@ function updateOverlayPinch() {
   selfOverlay.style.width = `${newWidth}px`;
   selfOverlay.style.height = '';
   clampOverlayToBounds();
+}
+
+function toggleDesktopLayout() {
+  if (!videoContainer || !toggleLayoutBtn) return;
+
+  desktopLayout = desktopLayout === 'side-by-side' ? 'overlay' : 'side-by-side';
+  applyDesktopLayout();
+
+  // Save preference
+  try {
+    localStorage.setItem('mini-meet:desktop-layout', desktopLayout);
+  } catch (_) {}
+}
+
+function applyDesktopLayout() {
+  if (!videoContainer || !toggleLayoutBtn) return;
+
+  videoContainer.dataset.layout = desktopLayout;
+
+  const gridIcon = toggleLayoutBtn.querySelector('[data-icon="layout-grid"]');
+  const overlayIcon = toggleLayoutBtn.querySelector('[data-icon="layout-overlay"]');
+
+  if (desktopLayout === 'overlay') {
+    // Overlay mode: hide side-by-side local video, show overlay
+    videoContainer.classList.remove('md:grid', 'md:grid-cols-2', 'md:gap-6');
+    videoContainer.classList.add('md:flex', 'md:flex-col');
+
+    if (localVideoContainer) {
+      localVideoContainer.classList.add('md:hidden');
+    }
+
+    if (remoteVideoContainer) {
+      remoteVideoContainer.classList.remove('md:aspect-video');
+      remoteVideoContainer.classList.add('md:flex-1', 'md:min-h-0');
+    }
+
+    if (desktopOverlay) {
+      desktopOverlay.classList.remove('md:hidden');
+      desktopOverlay.classList.add('md:block');
+      if (!desktopOverlayInitialized) {
+        initializeDesktopOverlayPosition();
+      }
+    }
+
+    if (gridIcon) gridIcon.classList.add('hidden');
+    if (overlayIcon) overlayIcon.classList.remove('hidden');
+  } else {
+    // Side-by-side mode
+    videoContainer.classList.add('md:grid', 'md:grid-cols-2', 'md:gap-6');
+    videoContainer.classList.remove('md:flex', 'md:flex-col');
+
+    if (localVideoContainer) {
+      localVideoContainer.classList.remove('md:hidden');
+    }
+
+    if (remoteVideoContainer) {
+      remoteVideoContainer.classList.add('md:aspect-video');
+      remoteVideoContainer.classList.remove('md:flex-1', 'md:min-h-0');
+    }
+
+    if (desktopOverlay) {
+      desktopOverlay.classList.add('md:hidden');
+      desktopOverlay.classList.remove('md:block');
+    }
+
+    if (gridIcon) gridIcon.classList.remove('hidden');
+    if (overlayIcon) overlayIcon.classList.add('hidden');
+  }
+}
+
+function initializeDesktopOverlayPosition() {
+  if (!desktopOverlay || !remoteVideoContainer) return;
+  if (desktopOverlayInitialized) return;
+
+  const boundaryRect = remoteVideoContainer.getBoundingClientRect();
+  const overlayRect = desktopOverlay.getBoundingClientRect();
+  const initialTop = Math.max(0, overlayRect.top - boundaryRect.top);
+  const initialLeft = Math.max(0, overlayRect.left - boundaryRect.left);
+
+  desktopOverlay.style.bottom = 'auto';
+  desktopOverlay.style.right = 'auto';
+  desktopOverlay.style.top = `${initialTop}px`;
+  desktopOverlay.style.left = `${initialLeft}px`;
+
+  desktopOverlayInitialized = true;
+}
+
+function clampDesktopOverlayToBounds() {
+  if (!desktopOverlay || !remoteVideoContainer || !desktopOverlayInitialized) return;
+
+  const maxLeft = Math.max(0, remoteVideoContainer.clientWidth - desktopOverlay.offsetWidth);
+  const maxTop = Math.max(0, remoteVideoContainer.clientHeight - desktopOverlay.offsetHeight);
+  const currentLeft = parseFloat(desktopOverlay.style.left || '0');
+  const currentTop = parseFloat(desktopOverlay.style.top || '0');
+  const nextLeft = Math.min(Math.max(currentLeft, 0), maxLeft);
+  const nextTop = Math.min(Math.max(currentTop, 0), maxTop);
+
+  if (!Number.isNaN(nextLeft)) desktopOverlay.style.left = `${nextLeft}px`;
+  if (!Number.isNaN(nextTop)) desktopOverlay.style.top = `${nextTop}px`;
+}
+
+function handleDesktopOverlayPointerDown(event) {
+  if (!desktopOverlay || !remoteVideoContainer) return;
+
+  initializeDesktopOverlayPosition();
+
+  if (desktopOverlayPointers) {
+    desktopOverlayPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  }
+
+  desktopOverlayDragState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startLeft: desktopOverlay.offsetLeft,
+    startTop: desktopOverlay.offsetTop,
+    maxLeft: Math.max(0, remoteVideoContainer.clientWidth - desktopOverlay.offsetWidth),
+    maxTop: Math.max(0, remoteVideoContainer.clientHeight - desktopOverlay.offsetHeight),
+  };
+
+  desktopOverlay.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function handleDesktopOverlayPointerMove(event) {
+  if (!desktopOverlayDragState || event.pointerId !== desktopOverlayDragState.pointerId) return;
+
+  const deltaX = event.clientX - desktopOverlayDragState.startX;
+  const deltaY = event.clientY - desktopOverlayDragState.startY;
+  const nextLeft = Math.min(Math.max(desktopOverlayDragState.startLeft + deltaX, 0), desktopOverlayDragState.maxLeft);
+  const nextTop = Math.min(Math.max(desktopOverlayDragState.startTop + deltaY, 0), desktopOverlayDragState.maxTop);
+
+  desktopOverlay.style.left = `${nextLeft}px`;
+  desktopOverlay.style.top = `${nextTop}px`;
+
+  event.preventDefault();
+}
+
+function handleDesktopOverlayPointerUp(event) {
+  if (desktopOverlayPointers) {
+    desktopOverlayPointers.delete(event.pointerId);
+  }
+
+  if (desktopOverlayDragState && event.pointerId === desktopOverlayDragState.pointerId) {
+    desktopOverlay.releasePointerCapture(event.pointerId);
+    desktopOverlayDragState = null;
+    clampDesktopOverlayToBounds();
+  } else {
+    desktopOverlay.releasePointerCapture(event.pointerId);
+  }
 }
 
 function setStatus(key, mode) {
@@ -693,6 +855,31 @@ window.addEventListener('load', () => {
       const orientationHandler = () => syncOverlayAspectForOrientation();
       orientationQuery.addEventListener('change', orientationHandler);
     }
+  }
+
+  // Desktop overlay drag handlers
+  if (desktopOverlay) {
+    desktopOverlay.addEventListener('pointerdown', handleDesktopOverlayPointerDown, { passive: false });
+    desktopOverlay.addEventListener('pointermove', handleDesktopOverlayPointerMove, { passive: false });
+    desktopOverlay.addEventListener('pointerup', handleDesktopOverlayPointerUp);
+    desktopOverlay.addEventListener('pointercancel', handleDesktopOverlayPointerUp);
+  }
+
+  // Layout toggle button
+  if (toggleLayoutBtn) {
+    // Load saved layout preference
+    try {
+      const savedLayout = localStorage.getItem('mini-meet:desktop-layout');
+      if (savedLayout === 'overlay') {
+        desktopLayout = 'overlay';
+      }
+    } catch (_) {}
+
+    // Apply initial layout
+    applyDesktopLayout();
+
+    // Add click handler
+    toggleLayoutBtn.addEventListener('click', toggleDesktopLayout);
   }
 
   window.addEventListener('pagehide', markShuttingDown);
