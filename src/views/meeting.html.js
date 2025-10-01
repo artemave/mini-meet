@@ -109,6 +109,65 @@ export default function meetingView({ roomId }) {
           </div>
         </div>
       </main>
+      <div
+        id="unsupported-browser-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 hidden"
+        role="dialog"
+        aria-labelledby="modal-title"
+        aria-modal="true"
+      >
+        <div class="relative max-w-md w-full rounded-2xl border border-slate-500/30 bg-slate-900 p-6 shadow-2xl">
+          <div class="mb-4">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="h-6 w-6 text-amber-400"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+          </div>
+          <h3 id="modal-title" class="mb-2 text-center text-lg font-semibold text-slate-100">
+            Browser Not Supported
+          </h3>
+          <p id="modal-message" class="mb-6 text-center text-sm text-slate-300">
+            Video calls don't work in <span id="browser-name" class="font-semibold">this app</span>'s built-in browser. Please open this link in your default browser (Safari, Chrome, Firefox, etc.).
+          </p>
+          <div class="flex flex-col gap-3">
+            <button
+              id="modal-share-link"
+              type="button"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="h-4 w-4"
+              >
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Share Link
+            </button>
+          </div>
+        </div>
+      </div>
       <footer
         class="relative sticky bottom-0 z-20 flex items-center justify-center gap-3 border-t border-white/5 bg-slate-950/80 px-4 py-3 backdrop-blur-xl md:px-6"
         style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);"
@@ -124,7 +183,7 @@ export default function meetingView({ roomId }) {
         <button
           id="copy"
           type="button"
-          aria-label="Copy link"
+          aria-label="Share link"
           class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 hover:-translate-y-0.5 hover:from-emerald-400 hover:to-emerald-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
         >
           <svg
@@ -137,14 +196,13 @@ export default function meetingView({ roomId }) {
             stroke-linejoin="round"
             class="h-5 w-5"
           >
-            <path
-              d="M8.25 7.5a3.75 3.75 0 013.75-3.75h3a3.75 3.75 0 013.75 3.75v3a3.75 3.75 0 01-3.75 3.75h-3"
-            />
-            <path
-              d="M15.75 16.5a3.75 3.75 0 01-3.75 3.75h-3a3.75 3.75 0 01-3.75-3.75v-3A3.75 3.75 0 019 9.75h3"
-            />
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
-          <span class="sr-only">Copy link</span>
+          <span class="sr-only">Share link</span>
         </button>
         <button
           id="toggle-mic"

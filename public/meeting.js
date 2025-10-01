@@ -11,6 +11,9 @@ const swapCamera = document.getElementById('swap-camera');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
 const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
+const unsupportedBrowserModal = document.getElementById('unsupported-browser-modal');
+const modalShareLinkBtn = document.getElementById('modal-share-link');
+const modalBrowserName = document.getElementById('browser-name');
 let isReconnecting = false;
 let isShuttingDown = false;
 const selfOverlay = document.querySelector('[data-self-overlay]');
@@ -32,6 +35,41 @@ let isInitiator = false;
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
 let ws;
 
+function detectUnsupportedBrowser() {
+  const ua = navigator.userAgent || '';
+
+  // Check for known in-app browsers
+  const isTelegramWebview = /TelegramWebview|Telegram/i.test(ua);
+  const isInstagramWebview = /Instagram/i.test(ua);
+  const isFacebookWebview = /FB_IAB|FBAN|FBAV/i.test(ua);
+  const isWhatsAppWebview = /WhatsApp/i.test(ua);
+  const isMessengerWebview = /Messenger/i.test(ua);
+  const isLineWebview = /Line/i.test(ua);
+  const isTwitterWebview = /Twitter/i.test(ua);
+  const isLinkedInWebview = /LinkedInApp/i.test(ua);
+
+  const isKnownInAppBrowser = isTelegramWebview || isInstagramWebview || isFacebookWebview ||
+                               isWhatsAppWebview || isMessengerWebview || isLineWebview ||
+                               isTwitterWebview || isLinkedInWebview;
+
+  // Check if getUserMedia is available
+  const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  // Return detection result
+  return {
+    isUnsupported: isKnownInAppBrowser || !hasGetUserMedia,
+    reason: isKnownInAppBrowser ? 'in-app-browser' : (!hasGetUserMedia ? 'no-webrtc' : null),
+    browserName: isTelegramWebview ? 'Telegram' :
+                 isInstagramWebview ? 'Instagram' :
+                 isFacebookWebview ? 'Facebook' :
+                 isWhatsAppWebview ? 'WhatsApp' :
+                 isMessengerWebview ? 'Messenger' :
+                 isLineWebview ? 'Line' :
+                 isTwitterWebview ? 'Twitter' :
+                 isLinkedInWebview ? 'LinkedIn' :
+                 'this app'
+  };
+}
 
 function showCopyToast() {
   clearTimeout(copyToastVisibleTimer);
@@ -42,6 +80,55 @@ function showCopyToast() {
     copyToast.classList.remove('opacity-100');
     copyToast.classList.add('opacity-0');
   }, 1600);
+}
+
+async function shareMeetingLink() {
+  try {
+    // Try Web Share API first
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Mini Meet',
+        text: 'Join my video call',
+        url: location.href
+      });
+      return;
+    }
+
+    // Fallback to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(location.href);
+      showCopyToast();
+      return;
+    }
+
+    // Last resort: prompt
+    window.prompt('Copy meeting link:', location.href);
+  } catch (err) {
+    // If share was cancelled or failed, try clipboard as fallback
+    if (err.name === 'AbortError') {
+      // User cancelled share dialog, do nothing
+      return;
+    }
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(location.href);
+        showCopyToast();
+      } else {
+        window.prompt('Copy meeting link:', location.href);
+      }
+    } catch (_) {
+      window.prompt('Copy meeting link:', location.href);
+    }
+  }
+}
+
+function showUnsupportedBrowserModal(browserName) {
+  if (!unsupportedBrowserModal) return;
+  if (browserName) {
+    modalBrowserName.textContent = browserName;
+  }
+  unsupportedBrowserModal.classList.remove('hidden');
 }
 
 function scheduleReconnect(reason) {
@@ -567,6 +654,14 @@ window.addEventListener('load', () => {
   }
   window.meetingJsLoaded = true
 
+  // Check for unsupported browser
+  const browserCheck = detectUnsupportedBrowser();
+  if (browserCheck.isUnsupported) {
+    showUnsupportedBrowserModal(browserCheck.browserName);
+  }
+
+  modalShareLinkBtn.addEventListener('click', shareMeetingLink);
+
   swapCamera.addEventListener('click', swapCameraFacing);
 
   remoteVideo.addEventListener('error', (e) => {
@@ -611,15 +706,7 @@ window.addEventListener('load', () => {
 
   roomEl.textContent = `Room: ${roomId}`;
 
-  copyBtn.addEventListener('click', async () => {
-    try {
-      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('clipboard unsupported');
-      await navigator.clipboard.writeText(location.href);
-      showCopyToast();
-    } catch (_) {
-      window.prompt('Copy meeting link:', location.href);
-    }
-  });
+  copyBtn.addEventListener('click', shareMeetingLink);
 
   toggleMic.addEventListener('click', () => {
     if (!localStream) return;
@@ -635,5 +722,10 @@ window.addEventListener('load', () => {
     updateCamButton();
   });
 
-  startLocalMedia().then(connectWebSocket)
+  // Only start local media if browser is supported
+  if (!browserCheck.isUnsupported) {
+    startLocalMedia().then(connectWebSocket).catch((err) => {
+      console.error('Failed to start local media:', err);
+    });
+  }
 })
