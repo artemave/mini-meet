@@ -4,7 +4,7 @@ import layout from './layout.html.js';
 export default function meetingView({ roomId }) {
   const body = html`
     <div
-      class="relative flex min-h-screen flex-col overflow-x-hidden bg-slate-950 font-sans text-slate-100"
+      class="relative flex h-screen flex-col overflow-hidden bg-slate-950 font-sans text-slate-100 supports-[height:100dvh]:h-dvh"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden">
         <div
