@@ -1,23 +1,33 @@
+const IS_MOBILE = window.__IS_MOBILE__ || false;
 const roomId = location.pathname.split('/').pop();
 const roomEl = document.getElementById('room-id');
 const copyBtn = document.getElementById('copy');
 const statusEl = document.getElementById('status');
-const statusBaseClasses = statusEl?.dataset.statusBase || '';
+const statusLandscapeEl = document.getElementById('status-landscape');
+const statusBaseClasses = statusEl?.dataset.statusBase || statusLandscapeEl?.dataset.statusBase || '';
 const localVideos = Array.from(document.querySelectorAll('[data-local-video]'));
 const remoteVideo = document.querySelector('[data-remote-video]');
 const toggleMic = document.getElementById('toggle-mic');
 const toggleCam = document.getElementById('toggle-cam');
+const toggleMicLandscape = document.getElementById('toggle-mic-landscape');
+const toggleCamLandscape = document.getElementById('toggle-cam-landscape');
 const swapCamera = document.getElementById('swap-camera');
+const copyBtnLandscape = document.getElementById('copy-landscape');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
 const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
 const unsupportedBrowserModal = document.getElementById('unsupported-browser-modal');
 const modalShareLinkBtn = document.getElementById('modal-share-link');
 const modalBrowserName = document.getElementById('browser-name');
+const mobileHeader = document.getElementById('mobile-header');
+const mobileStatusColumn = document.getElementById('mobile-status-column');
+const mobileButtonsColumn = document.getElementById('mobile-buttons-column');
+const mobileFooter = document.getElementById('mobile-footer');
+const appRoot = document.getElementById('app-root');
 let isReconnecting = false;
 let isShuttingDown = false;
-const mobileOverlay = document.querySelector('[data-mobile-overlay]');
-const desktopOverlay = document.getElementById('desktop-overlay');
+const mobileOverlay = IS_MOBILE ? document.querySelector('[data-mobile-overlay]') : null;
+const desktopOverlay = !IS_MOBILE ? document.getElementById('desktop-overlay') : null;
 const selfOverlay = mobileOverlay;
 const overlayBoundary = mobileOverlay ? mobileOverlay.closest('[data-overlay-boundary]') : null;
 const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
@@ -32,6 +42,44 @@ let overlayAspectRatio = PORTRAIT_OVERLAY_ASPECT;
 const MIN_OVERLAY_WIDTH = 80;
 const MIN_DESKTOP_OVERLAY_WIDTH = 120;
 const orientationQuery = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(orientation: portrait)') : null;
+
+function applyMobileLandscapeLayout() {
+  if (!IS_MOBILE || !appRoot) return;
+
+  const isPortrait = orientationQuery ? orientationQuery.matches : window.innerHeight > window.innerWidth;
+
+  if (isPortrait) {
+    // Portrait mode: show header and footer, hide landscape columns
+    appRoot.classList.remove('flex-row');
+    appRoot.classList.add('flex-col');
+    if (mobileHeader) mobileHeader.classList.remove('hidden');
+    if (mobileFooter) mobileFooter.classList.remove('hidden');
+    if (mobileStatusColumn) mobileStatusColumn.classList.add('hidden');
+    if (mobileButtonsColumn) mobileButtonsColumn.classList.add('hidden');
+
+    // Portrait overlay: default size (w-24)
+    if (mobileOverlay) {
+      mobileOverlay.classList.remove('!w-40');
+      mobileOverlay.classList.add('!w-24');
+    }
+  } else {
+    // Landscape mode: show columns, hide header and footer
+    appRoot.classList.remove('flex-col');
+    appRoot.classList.add('flex-row');
+    if (mobileHeader) mobileHeader.classList.add('hidden');
+    if (mobileFooter) mobileFooter.classList.add('hidden');
+    if (mobileStatusColumn) mobileStatusColumn.classList.remove('hidden');
+    if (mobileStatusColumn) mobileStatusColumn.classList.add('flex');
+    if (mobileButtonsColumn) mobileButtonsColumn.classList.remove('hidden');
+    if (mobileButtonsColumn) mobileButtonsColumn.classList.add('flex');
+
+    // Landscape overlay: bigger (w-40)
+    if (mobileOverlay) {
+      mobileOverlay.classList.remove('!w-24');
+      mobileOverlay.classList.add('!w-40');
+    }
+  }
+}
 let copyToastVisibleTimer;
 let pcReady
 let localStream;
@@ -525,7 +573,6 @@ function handleDesktopOverlayPointerUp(event) {
 }
 
 function setStatus(key, mode) {
-  if (!statusEl) return;
   const labels = {
     waiting: 'Waiting for peer',
     connecting: 'Waiting for peer',
@@ -539,14 +586,23 @@ function setStatus(key, mode) {
   if (!label) {
     throw new Error(`Unknown status ${key}`)
   }
-  statusEl.textContent = label;
 
   const variants = {
     ok: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_14px_rgba(34,197,94,0.45)] animate-none',
     bad: 'border-rose-400/40 bg-rose-500/20 text-rose-100 animate-none',
     waiting: 'border-emerald-400/40 bg-emerald-400/15 text-emerald-100 shadow-[0_0_16px_rgba(34,197,94,0.5)] animate-pulse',
   };
-  statusEl.className = `${statusBaseClasses} ${variants[mode]}`.trim();
+
+  // Update both portrait and landscape status elements
+  if (statusEl) {
+    statusEl.textContent = label;
+    statusEl.className = `${statusBaseClasses} ${variants[mode]}`.trim();
+  }
+  if (statusLandscapeEl) {
+    statusLandscapeEl.textContent = label;
+    const landscapeClasses = statusLandscapeEl.dataset.statusBase || '';
+    statusLandscapeEl.className = `${landscapeClasses} ${variants[mode]} [writing-mode:vertical-lr] rotate-180`.trim();
+  }
 }
 
 async function startLocalMedia() {
@@ -735,35 +791,67 @@ function markShuttingDown() {
 }
 
 function updateMicButton() {
-  if (!toggleMic) return;
   if (!localStream) return;
   const enabled = localStream.getAudioTracks().every((t) => t.enabled);
-  toggleMic.dataset.state = enabled ? 'on' : 'off';
-  toggleMic.setAttribute('aria-pressed', String(!enabled));
   const label = enabled ? 'Mute microphone' : 'Unmute microphone';
-  toggleMic.setAttribute('aria-label', label);
-  const sr = toggleMic.querySelector('[data-label]');
-  if (sr) sr.textContent = label;
-  const iconOn = toggleMic.querySelector('[data-icon="mic-on"]');
-  const iconOff = toggleMic.querySelector('[data-icon="mic-off"]');
-  if (iconOn) iconOn.classList.toggle('hidden', !enabled);
-  if (iconOff) iconOff.classList.toggle('hidden', enabled);
+
+  // Update portrait button
+  if (toggleMic) {
+    toggleMic.dataset.state = enabled ? 'on' : 'off';
+    toggleMic.setAttribute('aria-pressed', String(!enabled));
+    toggleMic.setAttribute('aria-label', label);
+    const sr = toggleMic.querySelector('[data-label]');
+    if (sr) sr.textContent = label;
+    const iconOn = toggleMic.querySelector('[data-icon="mic-on"]');
+    const iconOff = toggleMic.querySelector('[data-icon="mic-off"]');
+    if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+    if (iconOff) iconOff.classList.toggle('hidden', enabled);
+  }
+
+  // Update landscape button
+  if (toggleMicLandscape) {
+    toggleMicLandscape.dataset.state = enabled ? 'on' : 'off';
+    toggleMicLandscape.setAttribute('aria-pressed', String(!enabled));
+    toggleMicLandscape.setAttribute('aria-label', label);
+    const sr = toggleMicLandscape.querySelector('[data-label]');
+    if (sr) sr.textContent = label;
+    const iconOn = toggleMicLandscape.querySelector('[data-icon="mic-on"]');
+    const iconOff = toggleMicLandscape.querySelector('[data-icon="mic-off"]');
+    if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+    if (iconOff) iconOff.classList.toggle('hidden', enabled);
+  }
 }
 
 function updateCamButton() {
-  if (!toggleCam) return;
   if (!localStream) return;
   const enabled = localStream.getVideoTracks().every((t) => t.enabled);
-  toggleCam.dataset.state = enabled ? 'on' : 'off';
-  toggleCam.setAttribute('aria-pressed', String(!enabled));
   const label = enabled ? 'Stop video' : 'Start video';
-  toggleCam.setAttribute('aria-label', label);
-  const sr = toggleCam.querySelector('[data-label]');
-  if (sr) sr.textContent = label;
-  const iconOn = toggleCam.querySelector('[data-icon="cam-on"]');
-  const iconOff = toggleCam.querySelector('[data-icon="cam-off"]');
-  if (iconOn) iconOn.classList.toggle('hidden', !enabled);
-  if (iconOff) iconOff.classList.toggle('hidden', enabled);
+
+  // Update portrait button
+  if (toggleCam) {
+    toggleCam.dataset.state = enabled ? 'on' : 'off';
+    toggleCam.setAttribute('aria-pressed', String(!enabled));
+    toggleCam.setAttribute('aria-label', label);
+    const sr = toggleCam.querySelector('[data-label]');
+    if (sr) sr.textContent = label;
+    const iconOn = toggleCam.querySelector('[data-icon="cam-on"]');
+    const iconOff = toggleCam.querySelector('[data-icon="cam-off"]');
+    if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+    if (iconOff) iconOff.classList.toggle('hidden', enabled);
+  }
+
+  // Update landscape button
+  if (toggleCamLandscape) {
+    toggleCamLandscape.dataset.state = enabled ? 'on' : 'off';
+    toggleCamLandscape.setAttribute('aria-pressed', String(!enabled));
+    toggleCamLandscape.setAttribute('aria-label', label);
+    const sr = toggleCamLandscape.querySelector('[data-label]');
+    if (sr) sr.textContent = label;
+    const iconOn = toggleCamLandscape.querySelector('[data-icon="cam-on"]');
+    const iconOff = toggleCamLandscape.querySelector('[data-icon="cam-off"]');
+    if (iconOn) iconOn.classList.toggle('hidden', !enabled);
+    if (iconOff) iconOff.classList.toggle('hidden', enabled);
+  }
 }
 
 async function swapCameraFacing() {
@@ -824,7 +912,19 @@ window.addEventListener('load', () => {
 
   modalShareLinkBtn.addEventListener('click', shareMeetingLink);
 
-  swapCamera.addEventListener('click', swapCameraFacing);
+  if (swapCamera) {
+    swapCamera.addEventListener('click', swapCameraFacing);
+  }
+
+  // Mobile landscape layout
+  if (IS_MOBILE) {
+    applyMobileLandscapeLayout();
+    window.addEventListener('resize', applyMobileLandscapeLayout);
+    window.addEventListener('orientationchange', applyMobileLandscapeLayout);
+    if (orientationQuery) {
+      orientationQuery.addEventListener('change', applyMobileLandscapeLayout);
+    }
+  }
 
   remoteVideo.addEventListener('error', (e) => {
     console.error('remote video error', e);
@@ -857,29 +957,32 @@ window.addEventListener('load', () => {
     }
   }
 
-  // Desktop overlay drag handlers
-  if (desktopOverlay) {
-    desktopOverlay.addEventListener('pointerdown', handleDesktopOverlayPointerDown, { passive: false });
-    desktopOverlay.addEventListener('pointermove', handleDesktopOverlayPointerMove, { passive: false });
-    desktopOverlay.addEventListener('pointerup', handleDesktopOverlayPointerUp);
-    desktopOverlay.addEventListener('pointercancel', handleDesktopOverlayPointerUp);
-  }
+  // Desktop-only features
+  if (!IS_MOBILE) {
+    // Desktop overlay drag handlers
+    if (desktopOverlay) {
+      desktopOverlay.addEventListener('pointerdown', handleDesktopOverlayPointerDown, { passive: false });
+      desktopOverlay.addEventListener('pointermove', handleDesktopOverlayPointerMove, { passive: false });
+      desktopOverlay.addEventListener('pointerup', handleDesktopOverlayPointerUp);
+      desktopOverlay.addEventListener('pointercancel', handleDesktopOverlayPointerUp);
+    }
 
-  // Layout toggle button
-  if (toggleLayoutBtn) {
-    // Load saved layout preference
-    try {
-      const savedLayout = localStorage.getItem('mini-meet:desktop-layout');
-      if (savedLayout === 'overlay') {
-        desktopLayout = 'overlay';
-      }
-    } catch (_) {}
+    // Layout toggle button
+    if (toggleLayoutBtn) {
+      // Load saved layout preference
+      try {
+        const savedLayout = localStorage.getItem('mini-meet:desktop-layout');
+        if (savedLayout === 'overlay') {
+          desktopLayout = 'overlay';
+        }
+      } catch (_) {}
 
-    // Apply initial layout
-    applyDesktopLayout();
+      // Apply initial layout
+      applyDesktopLayout();
 
-    // Add click handler
-    toggleLayoutBtn.addEventListener('click', toggleDesktopLayout);
+      // Add click handler
+      toggleLayoutBtn.addEventListener('click', toggleDesktopLayout);
+    }
   }
 
   window.addEventListener('pagehide', markShuttingDown);
@@ -891,23 +994,46 @@ window.addEventListener('load', () => {
 
   localStorage.setItem('mini-meet:last-room', roomId);
 
-  roomEl.textContent = `Room: ${roomId}`;
+  if (roomEl) {
+    roomEl.textContent = `Room: ${roomId}`;
+  }
 
   copyBtn.addEventListener('click', shareMeetingLink);
 
-  toggleMic.addEventListener('click', () => {
+  const toggleMicHandler = () => {
     if (!localStream) return;
     const enabled = localStream.getAudioTracks().every((t) => t.enabled);
     localStream.getAudioTracks().forEach((t) => (t.enabled = !enabled));
     updateMicButton();
-  });
+  };
 
-  toggleCam.addEventListener('click', () => {
+  const toggleCamHandler = () => {
     if (!localStream) return;
     const enabled = localStream.getVideoTracks().every((t) => t.enabled);
     localStream.getVideoTracks().forEach((t) => (t.enabled = !enabled));
     updateCamButton();
-  });
+  };
+
+  if (toggleMic) {
+    toggleMic.addEventListener('click', toggleMicHandler);
+  }
+
+  if (toggleCam) {
+    toggleCam.addEventListener('click', toggleCamHandler);
+  }
+
+  // Landscape button listeners
+  if (toggleMicLandscape) {
+    toggleMicLandscape.addEventListener('click', toggleMicHandler);
+  }
+
+  if (toggleCamLandscape) {
+    toggleCamLandscape.addEventListener('click', toggleCamHandler);
+  }
+
+  if (copyBtnLandscape) {
+    copyBtnLandscape.addEventListener('click', shareMeetingLink);
+  }
 
   // Only start local media if browser is supported
   if (!browserCheck.isUnsupported) {

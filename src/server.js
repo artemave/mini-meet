@@ -65,7 +65,9 @@ app.get('/new', (req, res) => {
 
 // Serve meeting page
 app.get('/m/:id', (req, res) => {
-  const html = meetingView({ roomId: req.params.id });
+  const userAgent = req.headers['user-agent'] || '';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const html = meetingView({ roomId: req.params.id, isMobile });
   res.send(String(html));
 });
 
