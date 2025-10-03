@@ -20,7 +20,7 @@ export default function meetingView({ roomId, isMobile = false }) {
       <header
         id="mobile-header"
         class="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-white/5 bg-slate-950/80 px-4 py-1 backdrop-blur-xl"
-        style="padding-top: calc(env(safe-area-inset-top, 0px) + 8px);"
+        style="padding-top: env(safe-area-inset-top, 0px);"
       >
         <a class="flex items-center gap-2" href="/">
           <img src="/icons/icon.svg" alt="Mini Meet" class="w-9 h-9" />
@@ -396,7 +396,7 @@ export default function meetingView({ roomId, isMobile = false }) {
       <footer
         id="mobile-footer"
         class="relative sticky bottom-0 z-20 flex items-center justify-center gap-3 border-t border-white/5 bg-slate-950/80 ${isMobile ? 'px-4 py-1' : 'px-6 py-4'} backdrop-blur-xl"
-        style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + ${isMobile ? '8' : '16'}px);"
+        style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + ${isMobile ? '0' : '16'}px);"
       >
         <div
           id="copy-toast"
