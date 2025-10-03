@@ -1,5 +1,13 @@
 const IS_MOBILE = window.__IS_MOBILE__ || false;
 const roomId = location.pathname.split('/').pop();
+
+// Beacon logger
+function beacon(event, context = {}) {
+  console.debug(event, { roomId, context })
+  const blob = new Blob([JSON.stringify({ event, roomId, context })], { type: 'application/json' });
+  navigator.sendBeacon('/log', blob);
+}
+
 const roomEl = document.getElementById('room-id');
 const copyBtn = document.getElementById('copy');
 const statusEl = document.getElementById('status');
@@ -194,12 +202,11 @@ function showUnsupportedBrowserModal(browserName) {
 function scheduleReconnect(reason) {
   if (isShuttingDown || isReconnecting) return;
   isReconnecting = true;
-  restartConnection(reason);
+  beacon('reconnect_scheduled', { reason });
+  restartConnection();
 }
 
-async function restartConnection(reason) {
-  console.debug(`restartConnection: ${reason}`)
-
+async function restartConnection() {
   try {
     if (isShuttingDown) return;
 
@@ -207,7 +214,7 @@ async function restartConnection(reason) {
       connectWebSocket();
       return;
     }
-    await setupPeerConnection();
+    await setupPeerConnection('restartConnection');
 
     setStatus('waiting', 'waiting');
     if (isInitiator) {
@@ -627,7 +634,12 @@ function connectWebSocket() {
 
   ws = new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`);
 
-  ws.addEventListener('close', () => {
+  ws.addEventListener('open', () => {
+    beacon('ws_connected');
+  });
+
+  ws.addEventListener('close', (event) => {
+    beacon('ws_closed', { code: event.code, reason: event.reason });
     if (!isShuttingDown) scheduleReconnect('ws-closed');
   });
 
@@ -640,7 +652,7 @@ function connectWebSocket() {
         return;
       case 'welcome':
         isInitiator = !!msg.initiator;
-        await setupPeerConnection();
+        await setupPeerConnection('ws:welcome');
         if (!isInitiator) send('ready');
         break;
       case 'ready':
@@ -660,7 +672,7 @@ function connectWebSocket() {
           remoteVideo.srcObject = null;
         }
         isInitiator = true;
-        await setupPeerConnection();
+        await setupPeerConnection('ws:bye');
         setStatus('waiting', 'waiting');
         break;
     }
@@ -685,7 +697,9 @@ function isLikelyRussianUser() {
   return russianTimezones.includes(timezone) || isRussianLanguage;
 }
 
-async function setupPeerConnection() {
+async function setupPeerConnection(reason) {
+  beacon('setup_peer_connection', { reason });
+
   let resolvePcReady;
   const oldPcReady = pcReady;
   pcReady = new Promise((resolve) => {
@@ -738,16 +752,19 @@ async function setupPeerConnection() {
   pc.oniceconnectionstatechange = () => {
     if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
       setStatus('connected', 'ok');
+      beacon('ice_state_change:peer_connected', { state: pc.iceConnectionState });
     }
     if (pc.iceConnectionState === 'failed') {
-      setStatus('failed', 'bad');
+      setStatus('ice_state_change:sfailed', 'bad', { state: 'failed' });
       scheduleReconnect('ice-failed');
     }
     if (pc.iceConnectionState === 'closed') {
-      scheduleReconnect('ice-closed');
+      beacon('peer_disconnected', { state: 'closed' });
+      scheduleReconnect('ice_state_change:ice-closed');
     }
   };
   pc.onconnectionstatechange = () => {
+    beacon('connection_state_change', { state: pc.connectionState });
     if (pc.connectionState === 'failed') scheduleReconnect('connection-failed');
   };
 

@@ -7,9 +7,29 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
 import Rollbar from 'rollbar';
+import debug from 'debug';
 import indexView from './views/index.html.js';
 import meetingView from './views/meeting.html.js';
-import morgan from 'morgan'
+
+// IP extraction helper
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+         req.headers['x-real-ip'] ||
+         req.socket.remoteAddress ||
+         'unknown';
+}
+
+// Create scoped logger with metadata
+function createLogger(namespace, metadata = {}) {
+  const logger = debug(namespace);
+  return (msg) => {
+    const meta = Object.entries(metadata)
+      .filter(([_, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(' ');
+    logger(meta ? `${meta} ${msg}` : msg);
+  };
+}
 
 // Basic Express server + WS signaling for 1:1 rooms.
 const app = express();
@@ -51,11 +71,34 @@ app.use((req, res, next) => {
   next();
 });
 
+// Parse JSON bodies first
+app.use(express.json({ limit: '200kb' }));
+
+// HTTP request logger and scoped logger attachment
+app.use((req, res, next) => {
+  const start = Date.now();
+  const ip = getClientIp(req);
+  const roomId = req.params?.id || req.query?.roomId || '';
+
+  // Attach scoped loggers to request
+  req.log = {
+    http: createLogger('mini-meet:http', { ip, roomId }),
+    turn: createLogger('mini-meet:turn', { ip }),
+    beacon: createLogger('mini-meet:beacon', { ip }),
+  };
+
+  req.log.http(`${req.method} ${req.path} STARTED`);
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    req.log.http(`${req.method} ${req.path} COMPLETED ${res.statusCode} ${duration}ms`);
+  });
+
+  next();
+});
+
 // Static files
 const publicDir = path.join(__dirname, '..', 'public');
-app.use(morgan('tiny'))
 app.use(express.static(publicDir));
-app.use(express.json({ limit: '200kb' }));
 
 // Create new meeting and redirect to unique URL
 app.get('/new', (req, res) => {
@@ -83,6 +126,22 @@ app.get('/', (req, res) => {
 // - TURN_URLS: comma-separated list of turn/turns URLs (e.g., turns:turn.example.com:5349?transport=tcp,turn:turn.example.com:3478?transport=udp)
 // - TURN_SECRET: shared secret configured in coturn (static-auth-secret)
 // - TURN_TTL: seconds until expiration (default 900)
+// Client telemetry beacon endpoint
+app.post('/log', (req, res) => {
+  const { event, roomId, context } = req.body || {};
+
+  if (!event) {
+    console.error('Beacon missing event field:', { body: req.body, contentType: req.headers['content-type'] });
+    return res.status(400).json({ error: 'event required' });
+  }
+
+  const contextStr = context ? JSON.stringify(context) : '';
+  req.log.beacon(`event=${event} ${contextStr}`.trim());
+
+  res.status(204).end();
+});
+
+// TURN REST credentials endpoint
 app.get('/turn', (req, res) => {
   const urlsEnv = process.env.TURN_URLS || '';
   const secret = process.env.TURN_SECRET || '';
@@ -95,6 +154,7 @@ app.get('/turn', (req, res) => {
   res.set('Cache-Control', 'no-store');
 
   if (!urls.length || !secret) {
+    req.log.turn('no_credentials_configured');
     return res.json({ iceServers: [] });
   }
 
@@ -102,6 +162,8 @@ app.get('/turn', (req, res) => {
   const tag = crypto.randomBytes(4).toString('base64url');
   const username = `${usernameTs}:${tag}`;
   const credential = crypto.createHmac('sha1', secret).update(username).digest('base64');
+
+  req.log.turn(`credentials_issued ttl=${ttl}s`);
 
   return res.json({
     iceServers: [
@@ -113,6 +175,12 @@ app.get('/turn', (req, res) => {
     ],
     ttl,
   });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err);
+  next(err);
 });
 
 app.use(rollbar.errorHandler());
@@ -138,22 +206,37 @@ function broadcastToRoom(roomId, fromWs, payload) {
 const wss = new WebSocketServer({ noServer: true });
 
 wss.on('connection', (ws, request) => {
+  const ip = getClientIp(request);
   const { searchParams } = new URL(request.url, 'http://localhost');
   const roomId = searchParams.get('roomId');
+
+  // Attach scoped loggers to WebSocket
+  ws.log = {
+    ws: createLogger('mini-meet:ws', { ip, roomId }),
+    wsMsg: createLogger('mini-meet:ws:msg', { ip, roomId }),
+    room: createLogger('mini-meet:room', { ip, roomId }),
+  };
+
   if (!roomId) {
+    ws.log.ws('rejected reason=no_room_id');
     ws.close(1008, 'roomId required');
     return;
   }
+
   const room = getRoom(roomId);
+
   // Enforce 1:1 cap: if two peers already, reject.
   if (room.size >= 2) {
+    ws.log.ws('rejected reason=room_full');
     try { ws.send(JSON.stringify({ type: 'room_full' })); } catch {}
     ws.close(1008, 'room full');
     return;
   }
-  room.add(ws);
 
+  room.add(ws);
   const initiator = room.size === 1; // first in room becomes initiator
+
+  ws.log.ws(`connected initiator=${initiator} peers=${room.size}`);
   ws.send(JSON.stringify({ type: 'welcome', initiator, peers: room.size }));
 
   ws.on('message', (data) => {
@@ -163,6 +246,9 @@ wss.on('connection', (ws, request) => {
     }
     const { type, payload } = msg || {};
     if (!type) return;
+
+    ws.log.wsMsg(`msg=${type}`);
+
     switch (type) {
       case 'ready':
       case 'offer':
@@ -176,12 +262,16 @@ wss.on('connection', (ws, request) => {
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code, reason) => {
+    ws.log.ws(`disconnected code=${code} reason=${reason || 'none'}`);
+
     const peers = rooms.get(roomId);
     if (peers) {
       peers.delete(ws);
-      if (peers.size === 0) rooms.delete(roomId);
-      else {
+      if (peers.size === 0) {
+        ws.log.room('room_empty');
+        rooms.delete(roomId);
+      } else {
         // Notify remaining peer of disconnect
         for (const other of peers) {
           if (other.readyState === other.OPEN) {

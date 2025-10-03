@@ -6,7 +6,7 @@ A minimal Google‑Meet–style 1:1 video chat. Users create a meeting, get a un
 - Unique meeting links (`/new` → `/m/:id`)
 - 1:1 P2P calls (STUN by default; optional TURN)
 - Simple UI with mute/video toggles and status indicator
-- Basic diagnostics and client log export (Phase 1)
+- Structured logging with `debug` module for troubleshooting connection issues
 
 ## Stack & Structure
 - Server: Node.js (Express, `ws`) — `src/server.js`
@@ -22,10 +22,35 @@ A minimal Google‑Meet–style 1:1 video chat. Users create a meeting, get a un
 
 ## Run
 - Dev (HTTP on localhost): `node --run dev` or `npm run dev` (defaults to `http://localhost:3000`)
+  - Logging enabled by default via `DEBUG=mini-meet:*`
 - Custom port: `PORT=3003 node --run dev`
 - Local HTTPS (recommended for mobile/LAN tests): provide cert/key via env
   - Generate with mkcert (Fedora): `sudo dnf install mkcert nss-tools && mkcert -install && mkdir -p certs && mkcert -key-file certs/key.pem -cert-file certs/cert.pem 192.168.x.x localhost 127.0.0.1 ::1`
   - Run: `PORT=3003 SSL_CERT_PATH=certs/cert.pem SSL_KEY_PATH=certs/key.pem npm run dev`
+
+## Logging
+The app uses the `debug` module for structured logging. Enable namespaces via the `DEBUG` env var:
+
+- `DEBUG=mini-meet:*` — all logs (HTTP, WebSocket, rooms, TURN, client beacons)
+- `DEBUG=mini-meet:ws,mini-meet:beacon` — only WebSocket and client telemetry
+- `DEBUG=mini-meet:ws:msg` — verbose WebSocket message logging
+- Production: `DEBUG=mini-meet:* npm start`
+
+**Log namespaces:**
+- `mini-meet:http` — HTTP requests with IP, roomId, status, timing
+- `mini-meet:ws` — WebSocket connections/disconnections
+- `mini-meet:ws:msg` — WebSocket message types (verbose)
+- `mini-meet:room` — Room lifecycle (creation, empty)
+- `mini-meet:turn` — TURN credential requests
+- `mini-meet:beacon` — Client telemetry (reconnects, ICE states, peer events)
+
+**Client beacons:** The browser sends telemetry to `/log` for key events:
+- `ws_connected`, `ws_closed` — WebSocket lifecycle
+- `reconnect_scheduled` — Reconnection attempts with reason
+- `ice_state_change`, `connection_state_change` — WebRTC state changes
+- `peer_connected`, `peer_disconnected` — Peer connection events
+
+All logs include `ip=X.X.X.X` and `roomId=xyz` for easy grep/filtering.
 
 ## Use
 - Create a room: open `/new` (e.g., `http://localhost:3003/new`)
@@ -56,8 +81,11 @@ A minimal Google‑Meet–style 1:1 video chat. Users create a meeting, get a un
 > Cert renewals run inside the `certbot` container; it talks to the Docker socket (requires the host user to have Docker access) and sends `HUP` to `coturn`, so the service keeps existing calls alive. If you rotate `TURN_SECRET`, rebuild the image (`docker compose -f coturn/docker-compose.yml build coturn`) and redeploy.
 
 ## Troubleshooting
-- “mediaDevices undefined” or copy API missing: use `http://localhost` or HTTPS (browsers require secure context).
-- No connection: check ICE states (status pill/logs), consider enabling TURN.
+- "mediaDevices undefined" or copy API missing: use `http://localhost` or HTTPS (browsers require secure context).
+- No connection: enable logging (`DEBUG=mini-meet:*`) and check:
+  - Server logs for WebSocket connection/disconnection events
+  - Client beacons for ICE state changes and reconnection attempts
+  - Consider enabling TURN if users are behind restrictive NATs/firewalls
 
 ## Security Notes
 - Do not commit real secrets. Keep `TURN_SECRET` server‑side; clients receive only short‑lived derived credentials.
