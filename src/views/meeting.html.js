@@ -25,7 +25,6 @@ export default function meetingView({ roomId, isMobile = false }) {
         <a class="flex items-center gap-2" href="/">
           <img src="/icons/icon.svg" alt="Mini Meet" class="w-9 h-9" />
         </a>
-        <div id="room-id" class="text-sm text-slate-400"></div>
         <div class="flex-1"></div>
         <span
           id="status"
