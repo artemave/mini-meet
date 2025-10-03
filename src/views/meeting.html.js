@@ -23,9 +23,9 @@ export default function meetingView({ roomId, isMobile = false }) {
         style="padding-top: calc(env(safe-area-inset-top, 0px) + 12px);"
       >
         <a class="flex items-center gap-2" href="/">
-          <img src="/icons/icon.svg" alt="Mini Meet" class="w-6 h-6" />
-          <span class="text-lg font-semibold text-slate-100">Mini Meet</span>
+          <img src="/icons/icon.svg" alt="Mini Meet" class="w-9 h-9" />
         </a>
+        <div id="room-id" class="text-sm text-slate-400"></div>
         <div class="flex-1"></div>
         <span
           id="status"
@@ -56,8 +56,7 @@ export default function meetingView({ roomId, isMobile = false }) {
         style="padding-top: calc(env(safe-area-inset-top, 0px) + 12px);"
       >
         <a class="flex items-center gap-2" href="/">
-          <img src="/icons/icon.svg" alt="Mini Meet" class="w-7 h-7" />
-          <span class="text-xl font-semibold text-slate-100">Mini Meet</span>
+          <img src="/icons/icon.svg" alt="Mini Meet" class="w-9 h-9" />
         </a>
         <div id="room-id" class="text-sm text-slate-400"></div>
         <div class="flex-1"></div>

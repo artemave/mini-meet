@@ -4,7 +4,7 @@ import layout from './layout.html.js';
 export default function indexView() {
   const body = html`
     <div
-      class="relative min-h-screen bg-slate-950 font-sans text-slate-100"
+      class="relative flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden">
         <div
@@ -14,18 +14,16 @@ export default function indexView() {
           class="absolute -bottom-48 -right-32 h-96 w-96 rounded-full bg-cyan-500/25 blur-3xl"
         ></div>
       </div>
-      <main class="relative flex min-h-screen items-center justify-center px-6 py-16 sm:py-24">
+      <main class="relative flex flex-1 items-center justify-center px-6 py-16 sm:py-24">
         <section
           class="relative z-10 flex w-full max-w-3xl flex-col items-center gap-6 rounded-3xl border border-slate-500/20 bg-slate-900/70 p-8 text-center shadow-emeraldGlow backdrop-blur-xl md:gap-8 md:p-12"
         >
+          <img src="/icons/icon.svg" alt="Mini Meet" class="w-20 h-20 sm:w-24 sm:h-24" />
           <span
-            class="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-emerald-300"
+            class="inline-flex items-center gap-2 rounded-full bg-slate-800/50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-slate-400"
           >
             Quick &amp; private
           </span>
-          <h1 class="text-4xl font-bold tracking-tight text-slate-50 sm:text-5xl md:text-6xl">
-            Mini Meet
-          </h1>
           <p class="max-w-xl text-balance text-base text-slate-300 sm:text-lg">
             Spin up a private 1:1 video room in seconds. Share the link and you are
             ready.
@@ -51,6 +49,9 @@ export default function indexView() {
           </p>
         </section>
       </main>
+      <footer class="relative z-10 flex justify-center pb-6 text-xs text-slate-500">
+        <a href="https://artem.rocks/" class="hover:text-slate-400 transition-colors">Made by Artem</a>
+      </footer>
       <script src="/index.js"></script>
     </div>
   `;
