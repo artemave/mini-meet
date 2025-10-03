@@ -652,7 +652,11 @@ function connectWebSocket() {
         return;
       case 'welcome':
         isInitiator = !!msg.initiator;
-        await setupPeerConnection('ws:welcome');
+        // Only recreate peer connection if it doesn't exist or is in bad state
+        const pc = pcReady ? await pcReady : null;
+        if (!pc || !['connected', 'completed'].includes(pc.iceConnectionState)) {
+          await setupPeerConnection('ws:welcome');
+        }
         if (!isInitiator) send('ready');
         break;
       case 'ready':
@@ -668,12 +672,16 @@ function connectWebSocket() {
         await onCandidate(msg.payload);
         break;
       case 'bye':
-        if (remoteVideo) {
-          remoteVideo.srcObject = null;
+        const pcBye = pcReady ? await pcReady : null;
+        // Only tear down if peer connection is actually dead
+        if (!pcBye || !['connected', 'completed'].includes(pcBye.iceConnectionState)) {
+          if (remoteVideo) {
+            remoteVideo.srcObject = null;
+          }
+          isInitiator = true;
+          await setupPeerConnection('ws:bye');
+          setStatus('waiting', 'waiting');
         }
-        isInitiator = true;
-        await setupPeerConnection('ws:bye');
-        setStatus('waiting', 'waiting');
         break;
     }
   };
