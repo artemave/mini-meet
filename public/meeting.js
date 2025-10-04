@@ -676,13 +676,19 @@ function connectWebSocket() {
         const pcBye = pcReady ? await pcReady : null;
         // Only tear down if peer connection is actually dead
         if (!pcBye || !['connected', 'completed'].includes(pcBye.iceConnectionState)) {
-          if (remoteVideo) {
-            remoteVideo.srcObject = null;
-          }
+          remoteVideo.srcObject = null;
           isInitiator = true;
           await setupPeerConnection('ws:bye');
           setStatus('waiting', 'waiting');
         }
+        break;
+      case 'leave':
+        // Peer explicitly left - always tear down
+        beacon('peer_left');
+        remoteVideo.srcObject = null;
+        isInitiator = true;
+        await setupPeerConnection('ws:leave');
+        setStatus('waiting', 'waiting');
         break;
     }
   };
@@ -725,6 +731,7 @@ async function setupPeerConnection(reason) {
     oldPc.onconnectionstatechange = null;
     oldPc.onsignalingstatechange = null;
     oldPc.close();
+    remoteVideo.srcObject = null;
   }
 
   const iceServers = [];
@@ -749,7 +756,7 @@ async function setupPeerConnection(reason) {
   const pc = new RTCPeerConnection({ iceServers });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
-    if (remoteVideo && remoteVideo.srcObject !== e.streams[0]) {
+    if (remoteVideo.srcObject !== e.streams[0]) {
       remoteVideo.srcObject = e.streams[0];
     }
   };
@@ -764,7 +771,7 @@ async function setupPeerConnection(reason) {
       beacon('ice_state_change:peer_connected', { state: pc.iceConnectionState });
     }
     if (pc.iceConnectionState === 'failed') {
-      setStatus('ice_state_change:sfailed', 'bad', { state: 'failed' });
+      setStatus('failed', 'bad', { state: 'failed' });
       scheduleReconnect('ice-failed');
     }
     if (pc.iceConnectionState === 'closed') {
@@ -1008,9 +1015,7 @@ window.addEventListener('load', () => {
     }
   }
 
-  window.addEventListener('pagehide', markShuttingDown);
-
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener('pagehide', () => {
     markShuttingDown();
     try { send('bye'); } catch (_) {}
   });
@@ -1057,6 +1062,19 @@ window.addEventListener('load', () => {
   if (copyBtnLandscape) {
     copyBtnLandscape.addEventListener('click', shareMeetingLink);
   }
+
+  // Send leave message when user navigates away
+  // Use pagehide instead of beforeunload for iOS Safari compatibility
+  window.addEventListener('pagehide', () => {
+    beacon('user_leaving');
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'leave' }));
+      } catch (e) {
+        // Ignore errors during page unload
+      }
+    }
+  });
 
   // Only start local media if browser is supported
   if (!browserCheck.isUnsupported) {

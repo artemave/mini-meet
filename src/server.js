@@ -255,6 +255,7 @@ wss.on('connection', (ws, request) => {
       case 'answer':
       case 'candidate':
       case 'bye':
+      case 'leave':
         broadcastToRoom(roomId, ws, { type, payload });
         break;
       default:
