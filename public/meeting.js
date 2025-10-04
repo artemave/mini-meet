@@ -6,6 +6,11 @@ function beacon(event, context = {}) {
   console.debug(event, { roomId, context })
   const blob = new Blob([JSON.stringify({ event, roomId, context })], { type: 'application/json' });
   navigator.sendBeacon('/log', blob);
+
+  // Also send to PostHog if available
+  if (window.posthog && typeof window.posthog.capture === 'function') {
+    window.posthog.capture(event, { ...context, roomId });
+  }
 }
 
 const roomEl = document.getElementById('room-id');
@@ -621,6 +626,7 @@ async function startLocalMedia() {
     }
     updateMicButton();
     updateCamButton();
+    beacon('meeting_joined', { isMobile: IS_MOBILE });
   } catch (err) {
     setStatus('camera_mic_error', 'bad');
 
@@ -941,6 +947,14 @@ window.addEventListener('load', () => {
   const browserCheck = detectUnsupportedBrowser();
   if (browserCheck.isUnsupported) {
     showUnsupportedBrowserModal(browserCheck.browserName);
+  }
+
+  // Initialize PostHog analytics
+  if (window.__POSTHOG_API_KEY__ && window.posthog) {
+    window.posthog.init(window.__POSTHOG_API_KEY__, {
+      api_host: '/ph',
+      person_profiles: 'identified_only'
+    });
   }
 
   modalShareLinkBtn.addEventListener('click', shareMeetingLink);

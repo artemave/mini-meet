@@ -126,9 +126,26 @@ app.get('/', (req, res) => {
 // - TURN_URLS: comma-separated list of turn/turns URLs (e.g., turns:turn.example.com:5349?transport=tcp,turn:turn.example.com:3478?transport=udp)
 // - TURN_SECRET: shared secret configured in coturn (static-auth-secret)
 // - TURN_TTL: seconds until expiration (default 900)
+// PostHog analytics proxy endpoint
+app.post('/ph/*', async (req, res) => {
+  const phPath = req.params[0];
+  const phUrl = `https://eu.i.posthog.com/${phPath}`;
+
+  const response = await fetch(phUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(req.body),
+  });
+
+  const data = await response.json();
+  res.status(response.status).json(data);
+});
+
 // Client telemetry beacon endpoint
 app.post('/log', (req, res) => {
-  const { event, roomId, context } = req.body || {};
+  const { event, context } = req.body || {};
 
   if (!event) {
     console.error('Beacon missing event field:', { body: req.body, contentType: req.headers['content-type'] });

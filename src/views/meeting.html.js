@@ -531,7 +531,11 @@ export default function meetingView({ roomId, isMobile = false }) {
         </a>
       </footer>
     </div>
-    <script>window.__IS_MOBILE__ = ${isMobile};</script>
+    <script>
+      window.__IS_MOBILE__ = ${isMobile};
+      window.__POSTHOG_API_KEY__ = '${process.env.POSTHOG_API_KEY || ''}';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/posthog-js@1.270.1/dist/posthog.min.js"></script>
     <script src="/meeting.js"></script>
   `;
 
