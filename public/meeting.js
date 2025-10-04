@@ -38,7 +38,6 @@ const mobileOverlay = IS_MOBILE ? document.querySelector('[data-mobile-overlay]'
 const desktopOverlay = !IS_MOBILE ? document.getElementById('desktop-overlay') : null;
 const selfOverlay = mobileOverlay;
 const overlayBoundary = mobileOverlay ? mobileOverlay.closest('[data-overlay-boundary]') : null;
-const prefersCoarsePointer = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(pointer: coarse)').matches : false;
 let overlayDragState = null;
 let overlayInitialized = false;
 const overlayPointers = selfOverlay ? new Map() : null;
@@ -344,7 +343,7 @@ function canDragOverlay(event) {
   if (event.pointerType) {
     return event.pointerType === 'touch';
   }
-  return prefersCoarsePointer;
+  return IS_MOBILE;
 }
 
 function currentOverlayOrientationAspect() {
@@ -424,6 +423,8 @@ function updateOverlayPinch() {
     maxWidth = rawWidth;
   }
   const newWidth = Math.max(MIN_OVERLAY_WIDTH, Math.min(rawWidth, maxWidth));
+  // Remove conflicting Tailwind classes
+  selfOverlay.classList.remove('!w-24', '!w-40');
   selfOverlay.style.width = `${newWidth}px`;
   selfOverlay.style.height = '';
   clampOverlayToBounds();
@@ -965,11 +966,8 @@ window.addEventListener('load', () => {
     });
   });
 
-  if (selfOverlay && overlayBoundary && prefersCoarsePointer) {
+  if (selfOverlay && overlayBoundary && IS_MOBILE) {
     const reflowOverlay = () => requestAnimationFrame(() => syncOverlayAspectForOrientation());
-    requestAnimationFrame(() => {
-      initializeOverlayPosition();
-    });
     selfOverlay.addEventListener('pointerdown', handleOverlayPointerDown, { passive: false });
     selfOverlay.addEventListener('pointermove', handleOverlayPointerMove, { passive: false });
     selfOverlay.addEventListener('pointerup', handleOverlayPointerUp);
