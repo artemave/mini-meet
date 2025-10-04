@@ -2,3 +2,4 @@ node_modules
 .env.example
 .claude
 public/styles.css
+certs/
