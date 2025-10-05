@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
 import Rollbar from 'rollbar';
 import debug from 'debug';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import indexView from './views/index.html.js';
 import meetingView from './views/meeting.html.js';
 
@@ -126,9 +127,24 @@ app.get('/', (req, res) => {
 // - TURN_URLS: comma-separated list of turn/turns URLs (e.g., turns:turn.example.com:5349?transport=tcp,turn:turn.example.com:3478?transport=udp)
 // - TURN_SECRET: shared secret configured in coturn (static-auth-secret)
 // - TURN_TTL: seconds until expiration (default 900)
+// PostHog analytics proxy endpoints
+// Static assets proxy (MUST come before general /ph proxy)
+app.use('/ph/static', createProxyMiddleware({
+  target: 'https://eu-assets.i.posthog.com',
+  changeOrigin: true,  // Sets Host header to eu-assets.i.posthog.com
+  pathRewrite: { '^/': '/static/' },  // Prepend /static to the path
+}));
+
+// PostHog API proxy
+app.use('/ph', createProxyMiddleware({
+  target: 'https://eu.i.posthog.com',
+  changeOrigin: true,  // Sets Host header to eu.i.posthog.com
+  pathRewrite: { '^/ph': '' },
+}));
+
 // Client telemetry beacon endpoint
 app.post('/log', (req, res) => {
-  const { event, roomId, context } = req.body || {};
+  const { event, context } = req.body || {};
 
   if (!event) {
     console.error('Beacon missing event field:', { body: req.body, contentType: req.headers['content-type'] });

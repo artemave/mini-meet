@@ -1,5 +1,6 @@
 import html from 'nanohtml';
 import rollbarSnippet from './rollbar.html.js';
+import posthogSnippet from './posthog.html.js';
 
 export default function layout({
   title = 'Mini Meet',
@@ -8,6 +9,10 @@ export default function layout({
   rollbar = {
     clientAccessToken: process.env.ROLLBAR_CLIENT_ACCESS_TOKEN,
     environment: process.env.ROLLBAR_ENVIRONMENT || 'development',
+  },
+  posthog = {
+    apiKey: process.env.POSTHOG_API_KEY,
+    apiHost: process.env.POSTHOG_API_HOST || '/ph',
   }
 }) {
   return html`
@@ -27,6 +32,7 @@ export default function layout({
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.webmanifest" />
         ${rollbarSnippet(rollbar)}
+        ${posthogSnippet(posthog)}
         ${head}
       </head>
       <body>

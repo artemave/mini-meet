@@ -52,6 +52,20 @@ The app uses the `debug` module for structured logging. Enable namespaces via th
 
 All logs include `ip=X.X.X.X` and `roomId=xyz` for easy grep/filtering.
 
+## Analytics (PostHog)
+The app includes optional PostHog analytics integration with a server-side proxy to bypass ad blockers.
+
+**Setup:**
+1. Sign up for PostHog (cloud or self-hosted)
+2. Set `POSTHOG_API_KEY` in your `.env` file
+3. Events are automatically sent to PostHog through `/ph/*` proxy endpoint
+
+**How it works:**
+- Client loads PostHog SDK from CDN
+- All requests go through `/ph/*` proxy instead of directly to PostHog
+- Beacon events (connection states, peer events, etc.) are sent to both server logs and PostHog
+- No cookies or tracking without explicit user interaction
+
 ## Use
 - Create a room: open `/new` (e.g., `http://localhost:3003/new`)
 - Share the resulting `/m/:id` link with the other participant
