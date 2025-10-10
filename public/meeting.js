@@ -89,6 +89,8 @@ function applyMobileLandscapeLayout() {
 }
 let copyToastVisibleTimer;
 let pcReady
+let pcGeneration = 0;
+let pendingIceCandidates = [];
 let localStream;
 let isInitiator = false;
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -715,6 +717,13 @@ function isLikelyRussianUser() {
 async function setupPeerConnection(reason) {
   beacon('setup_peer_connection', { reason });
 
+  // Increment generation to invalidate old signaling messages
+  pcGeneration++;
+  const currentGeneration = pcGeneration;
+
+  // Clear pending ICE candidates from previous connection
+  pendingIceCandidates = [];
+
   let resolvePcReady;
   const oldPcReady = pcReady;
   pcReady = new Promise((resolve) => {
@@ -784,13 +793,25 @@ async function setupPeerConnection(reason) {
     if (pc.connectionState === 'failed') scheduleReconnect('connection-failed');
   };
 
-  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+  // Add tracks in deterministic order: video first, then audio
+  // This ensures m-lines order stays consistent across reconnections
+  const videoTracks = localStream.getVideoTracks();
+  const audioTracks = localStream.getAudioTracks();
+  [...videoTracks, ...audioTracks].forEach((t) => pc.addTrack(t, localStream));
 
   resolvePcReady(pc);
+  pc._generation = currentGeneration;
 }
 
 async function makeOffer() {
   const pc = await pcReady;
+
+  // Only create offer in stable state
+  if (pc.signalingState !== 'stable') {
+    console.warn(`Cannot create offer in state: ${pc.signalingState}`);
+    return;
+  }
+
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   send('offer', offer);
@@ -798,7 +819,22 @@ async function makeOffer() {
 
 async function onOffer(offer) {
   const pc = await pcReady;
+
+  // Ignore offers from old peer connection generations
+  const expectedGeneration = pc._generation;
+  if (expectedGeneration !== pcGeneration) {
+    console.warn('Ignoring offer from old peer connection generation');
+    return;
+  }
+
+  // Can only set remote offer in stable or have-local-offer state
+  if (!['stable', 'have-local-offer'].includes(pc.signalingState)) {
+    console.warn(`Cannot process offer in state: ${pc.signalingState}`);
+    return;
+  }
+
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  await flushPendingIceCandidates();
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
   send('answer', answer);
@@ -806,12 +842,54 @@ async function onOffer(offer) {
 
 async function onAnswer(answer) {
   const pc = await pcReady;
+
+  // Ignore answers from old peer connection generations
+  const expectedGeneration = pc._generation;
+  if (expectedGeneration !== pcGeneration) {
+    console.warn('Ignoring answer from old peer connection generation');
+    return;
+  }
+
+  // Can only set remote answer in have-local-offer state
+  if (pc.signalingState !== 'have-local-offer') {
+    console.warn(`Cannot process answer in state: ${pc.signalingState}`);
+    beacon('answer_wrong_state', { state: pc.signalingState });
+    return;
+  }
+
   await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  await flushPendingIceCandidates();
 }
 
 async function onCandidate(candidate) {
   const pc = await pcReady;
+
+  // Ignore candidates from old peer connection generations
+  const expectedGeneration = pc._generation;
+  if (expectedGeneration !== pcGeneration) {
+    console.warn('Ignoring ICE candidate from old peer connection generation');
+    return;
+  }
+
+  // Queue candidates that arrive before remote description is set
+  if (!pc.remoteDescription) {
+    pendingIceCandidates.push(candidate);
+    return;
+  }
+
   await pc.addIceCandidate(new RTCIceCandidate(candidate));
+}
+
+async function flushPendingIceCandidates() {
+  const pc = await pcReady;
+  if (!pc.remoteDescription || pendingIceCandidates.length === 0) return;
+
+  const candidates = [...pendingIceCandidates];
+  pendingIceCandidates = [];
+
+  for (const candidate of candidates) {
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+  }
 }
 
 function send(type, payload) {
