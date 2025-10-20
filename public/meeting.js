@@ -21,6 +21,7 @@ const toggleMicLandscape = document.getElementById('toggle-mic-landscape');
 const toggleCamLandscape = document.getElementById('toggle-cam-landscape');
 const swapCamera = document.getElementById('swap-camera');
 const toggleScreenShareBtn = !IS_MOBILE ? document.getElementById('toggle-screen-share') : null;
+const toggleFullscreenBtn = !IS_MOBILE ? document.getElementById('toggle-fullscreen') : null;
 const copyBtnLandscape = document.getElementById('copy-landscape');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
@@ -1094,6 +1095,35 @@ function updateScreenShareButton() {
   if (iconOn) iconOn.classList.toggle('hidden', !isScreenSharing);
 }
 
+async function toggleFullscreen() {
+  if (!remoteVideoContainer) return;
+
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await remoteVideoContainer.requestFullscreen();
+    }
+  } catch (err) {
+    console.error('Fullscreen error:', err);
+  }
+}
+
+function updateFullscreenButton() {
+  if (!toggleFullscreenBtn) return;
+
+  const isFullscreen = document.fullscreenElement === remoteVideoContainer;
+  const label = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+
+  toggleFullscreenBtn.setAttribute('aria-label', label);
+  toggleFullscreenBtn.setAttribute('title', label);
+
+  const iconEnter = toggleFullscreenBtn.querySelector('[data-icon="fullscreen-enter"]');
+  const iconExit = toggleFullscreenBtn.querySelector('[data-icon="fullscreen-exit"]');
+  if (iconEnter) iconEnter.classList.toggle('hidden', isFullscreen);
+  if (iconExit) iconExit.classList.toggle('hidden', !isFullscreen);
+}
+
 window.addEventListener('load', () => {
   if (window.meetingJsLoaded) {
     return
@@ -1239,6 +1269,14 @@ window.addEventListener('load', () => {
       }
     });
   }
+
+  // Fullscreen toggle handler (desktop only)
+  if (toggleFullscreenBtn) {
+    toggleFullscreenBtn.addEventListener('click', toggleFullscreen);
+  }
+
+  // Listen for fullscreen changes (including ESC key)
+  document.addEventListener('fullscreenchange', updateFullscreenButton);
 
   // Send leave message when user navigates away
   // Use pagehide instead of beforeunload for iOS Safari compatibility

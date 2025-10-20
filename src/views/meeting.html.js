@@ -126,7 +126,7 @@ export default function meetingView({ roomId, isMobile = false }) {
           </div>` : ''}
           <div
             id="remote-video-container"
-            class="relative flex-1 min-h-0 w-full ${isMobile ? 'rounded-none border-none bg-slate-950 shadow-none' : 'h-full rounded-2xl border border-slate-500/30 shadow-2xl shadow-cyan-500/20'}"
+            class="relative flex-1 min-h-0 w-full ${isMobile ? 'rounded-none border-none bg-slate-950 shadow-none' : 'h-full rounded-2xl border border-slate-500/30 shadow-2xl shadow-cyan-500/20 group'}"
             data-overlay-boundary
           >
             <video
@@ -135,6 +135,41 @@ export default function meetingView({ roomId, isMobile = false }) {
               playsinline
               class="h-full w-full object-cover ${isMobile ? '' : 'rounded-2xl'}"
             ></video>
+            ${!isMobile ? html`<button
+              id="toggle-fullscreen"
+              type="button"
+              aria-label="Enter fullscreen"
+              title="Enter fullscreen"
+              class="absolute top-3 right-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-slate-900/70 text-slate-300 opacity-0 transition hover:border-white/20 hover:bg-slate-800/90 hover:text-slate-100 hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 group-hover:opacity-100"
+              style="backdrop-filter: blur(12px);"
+            >
+              <svg
+                data-icon="fullscreen-enter"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="h-4 w-4"
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+              <svg
+                data-icon="fullscreen-exit"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="hidden h-4 w-4"
+              >
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              </svg>
+            </button>` : ''}
             <div
               id="remote-play-overlay"
               class="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-10 hidden"
