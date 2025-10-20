@@ -20,6 +20,7 @@ const toggleCam = document.getElementById('toggle-cam');
 const toggleMicLandscape = document.getElementById('toggle-mic-landscape');
 const toggleCamLandscape = document.getElementById('toggle-cam-landscape');
 const swapCamera = document.getElementById('swap-camera');
+const toggleScreenShareBtn = !IS_MOBILE ? document.getElementById('toggle-screen-share') : null;
 const copyBtnLandscape = document.getElementById('copy-landscape');
 const copyToast = document.getElementById('copy-toast');
 const remotePlayButton = document.getElementById('remote-play-button')
@@ -93,6 +94,9 @@ let pcGeneration = 0;
 let pendingIceCandidates = [];
 let localStream;
 let isInitiator = false;
+let isScreenSharing = false;
+let screenStream = null;
+let savedCameraTrack = null;
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
 let ws;
 const videoContainer = document.getElementById('video-container');
@@ -1009,6 +1013,87 @@ async function swapCameraFacing() {
   newStream.getAudioTracks().forEach(track => track.stop());
 }
 
+async function startScreenShare() {
+  if (!localStream || isScreenSharing) return;
+
+  // Get screen share stream
+  screenStream = await navigator.mediaDevices.getDisplayMedia({
+    video: true
+  });
+
+  const screenTrack = screenStream.getVideoTracks()[0];
+
+  // Save current camera track
+  savedCameraTrack = localStream.getVideoTracks()[0];
+
+  // Replace video track in peer connection
+  if (pcReady) {
+    const pc = await pcReady;
+    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender) {
+      await sender.replaceTrack(screenTrack);
+    }
+  }
+
+  // Update local video elements to show screen
+  for (const videoEl of localVideos) {
+    videoEl.srcObject = screenStream;
+  }
+
+  // Handle when user stops sharing via browser UI
+  screenTrack.onended = () => {
+    stopScreenShare();
+  };
+
+  isScreenSharing = true;
+  updateScreenShareButton();
+}
+
+async function stopScreenShare() {
+  if (!isScreenSharing) return;
+
+  // Stop screen share tracks
+  if (screenStream) {
+    screenStream.getTracks().forEach(track => track.stop());
+    screenStream = null;
+  }
+
+  // Restore camera track in peer connection
+  if (pcReady && savedCameraTrack) {
+    const pc = await pcReady;
+    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender) {
+      await sender.replaceTrack(savedCameraTrack);
+    }
+  }
+
+  // Update local video elements to show camera
+  for (const videoEl of localVideos) {
+    videoEl.srcObject = localStream;
+  }
+
+  savedCameraTrack = null;
+  isScreenSharing = false;
+  updateScreenShareButton();
+}
+
+function updateScreenShareButton() {
+  if (!toggleScreenShareBtn) return;
+
+  const label = isScreenSharing ? 'Stop sharing' : 'Share screen';
+
+  toggleScreenShareBtn.dataset.state = isScreenSharing ? 'on' : 'off';
+  toggleScreenShareBtn.setAttribute('aria-label', label);
+
+  const sr = toggleScreenShareBtn.querySelector('[data-label]');
+  if (sr) sr.textContent = label;
+
+  const iconOff = toggleScreenShareBtn.querySelector('[data-icon="screen-share-off"]');
+  const iconOn = toggleScreenShareBtn.querySelector('[data-icon="screen-share-on"]');
+  if (iconOff) iconOff.classList.toggle('hidden', isScreenSharing);
+  if (iconOn) iconOn.classList.toggle('hidden', !isScreenSharing);
+}
+
 window.addEventListener('load', () => {
   if (window.meetingJsLoaded) {
     return
@@ -1095,6 +1180,9 @@ window.addEventListener('load', () => {
 
   window.addEventListener('pagehide', () => {
     markShuttingDown();
+    if (isScreenSharing) {
+      stopScreenShare();
+    }
     try { send('bye'); } catch (_) {}
   });
 
@@ -1139,6 +1227,17 @@ window.addEventListener('load', () => {
 
   if (copyBtnLandscape) {
     copyBtnLandscape.addEventListener('click', shareMeetingLink);
+  }
+
+  // Screen share toggle handler (desktop only)
+  if (toggleScreenShareBtn) {
+    toggleScreenShareBtn.addEventListener('click', async () => {
+      if (isScreenSharing) {
+        await stopScreenShare();
+      } else {
+        await startScreenShare();
+      }
+    });
   }
 
   // Send leave message when user navigates away

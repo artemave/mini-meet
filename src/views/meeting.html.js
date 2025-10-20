@@ -508,6 +508,47 @@ export default function meetingView({ roomId, isMobile = false }) {
           </svg>
           <span class="sr-only" data-label>Stop video</span>
         </button>
+        ${!isMobile ? html`<button
+          id="toggle-screen-share"
+          type="button"
+          data-state="off"
+          aria-label="Share screen"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-500/40 bg-gradient-to-br from-emerald-500 to-emerald-400 text-emerald-950 shadow-lg shadow-emerald-500/20 transition duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400 data-[state=on]:border-cyan-500/60 data-[state=on]:from-cyan-500 data-[state=on]:to-cyan-400 hover:-translate-y-0.5"
+        >
+          <svg
+            data-icon="screen-share-off"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="h-5 w-5"
+          >
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8" />
+            <path d="M12 17v4" />
+            <path d="M9 10l3 3 3-3" />
+          </svg>
+          <svg
+            data-icon="screen-share-on"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="hidden h-5 w-5"
+          >
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8" />
+            <path d="M12 17v4" />
+            <path d="M9 13l3-3 3 3" />
+          </svg>
+          <span class="sr-only" data-label>Share screen</span>
+        </button>` : ''}
         <a
           href="/"
           aria-label="Leave meeting"
