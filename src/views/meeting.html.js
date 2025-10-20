@@ -110,11 +110,11 @@ export default function meetingView({ roomId, isMobile = false }) {
         <div
           id="video-container"
           data-layout="side-by-side"
-          class="relative mx-auto flex w-full flex-1 flex-col gap-0 ${isMobile ? '' : 'grid grid-cols-2 gap-6 flex-none my-auto'}"
+          class="relative mx-auto flex w-full flex-1 flex-col gap-0 ${isMobile ? '' : 'grid grid-cols-2 gap-6 flex-1 min-h-0'}"
         >
           ${!isMobile ? html`<div
             id="local-video-container"
-            class="w-full rounded-2xl border border-slate-500/30 bg-slate-950 shadow-2xl shadow-emerald-500/20 aspect-video"
+            class="w-full h-full rounded-2xl border border-slate-500/30 bg-slate-950 shadow-2xl shadow-emerald-500/20"
           >
             <video
               data-local-video
@@ -126,7 +126,7 @@ export default function meetingView({ roomId, isMobile = false }) {
           </div>` : ''}
           <div
             id="remote-video-container"
-            class="relative flex-1 min-h-0 w-full ${isMobile ? 'rounded-none border-none bg-slate-950 shadow-none' : 'aspect-video h-auto rounded-2xl border border-slate-500/30 shadow-2xl shadow-cyan-500/20'}"
+            class="relative flex-1 min-h-0 w-full ${isMobile ? 'rounded-none border-none bg-slate-950 shadow-none' : 'h-full rounded-2xl border border-slate-500/30 shadow-2xl shadow-cyan-500/20'}"
             data-overlay-boundary
           >
             <video
