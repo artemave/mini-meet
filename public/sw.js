@@ -1,7 +1,11 @@
-self.addEventListener('install', () => {
-  self.skipWaiting();
+// @ts-check
+/// <reference lib="webworker" />
+const sw = /** @type {ServiceWorkerGlobalScope} */ (/** @type {unknown} */ (self));
+
+sw.addEventListener('install', () => {
+  sw.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+sw.addEventListener('activate', (event) => {
+  event.waitUntil(sw.clients.claim());
 });

@@ -1,6 +1,9 @@
 import html from 'nanohtml';
 import layout from './layout.html.js';
 
+/**
+ * @param {{ roomId: string, isMobile?: boolean }} params
+ */
 export default function meetingView({ roomId, isMobile = false }) {
   const body = html`
     <div

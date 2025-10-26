@@ -9,7 +9,11 @@
     "dev": "node scripts/dev.js",
     "watch-server": "NODE_ENV=development node --watch-path=./src --watch-preserve-output ./src/server.js",
     "watch-build": "npx @tailwindcss/cli -w -i ./src/styles.css -o ./public/styles.css",
-    "build": "npx @tailwindcss/cli -i ./src/styles.css -o ./public/styles.css"
+    "build": "npx @tailwindcss/cli -i ./src/styles.css -o ./public/styles.css",
+    "test": "node --test 'test/**/*.test.js'",
+    "test:watch": "node --test --watch test/**/*.test.js",
+    "test:server": "node --test test/server/**/*.test.js",
+    "test:client": "node --test test/client/**/*.test.js"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.13",
@@ -22,6 +26,13 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@playwright/test": "^1.49.0",
+    "@types/debug": "^4.1.12",
+    "@types/express": "^5.0.4",
+    "@types/node": "^24.9.1",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^9.2.1",
+    "playwright": "^1.49.0",
+    "typescript": "^5.9.3"
   }
 }

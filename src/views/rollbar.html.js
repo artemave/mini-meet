@@ -1,5 +1,8 @@
 import html from 'nanohtml';
 
+/**
+ * @param {{ clientAccessToken?: string, environment?: string }} params
+ */
 export default function rollbarSnippet({ clientAccessToken, environment }) {
   if (!clientAccessToken) {
     return html``;

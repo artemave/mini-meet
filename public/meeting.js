@@ -1,48 +1,57 @@
-const IS_MOBILE = window.__IS_MOBILE__ || false;
-const roomId = location.pathname.split('/').pop();
+/**
+ * @typedef {Window & { __IS_MOBILE__: boolean }} WindowWithMobile
+ */
+const IS_MOBILE = (/** @type {WindowWithMobile} */ (/** @type {unknown} */ (window))).__IS_MOBILE__;
+const roomId = /** @type {string} */ (location.pathname.split('/').pop());
 
 // Beacon logger
+/**
+ * @param {string} event
+ * @param {Record<string, any>} context
+ */
 function beacon(event, context = {}) {
   console.debug(event, { roomId, context })
   const blob = new Blob([JSON.stringify({ event, roomId, context })], { type: 'application/json' });
   navigator.sendBeacon('/log', blob);
 }
 
-const roomEl = document.getElementById('room-id');
-const copyBtn = document.getElementById('copy');
-const statusEl = document.getElementById('status');
-const statusLandscapeEl = document.getElementById('status-landscape');
-const statusBaseClasses = statusEl?.dataset.statusBase || statusLandscapeEl?.dataset.statusBase || '';
-const localVideos = Array.from(document.querySelectorAll('[data-local-video]'));
-const remoteVideo = document.querySelector('[data-remote-video]');
-const toggleMic = document.getElementById('toggle-mic');
-const toggleCam = document.getElementById('toggle-cam');
-const toggleMicLandscape = document.getElementById('toggle-mic-landscape');
-const toggleCamLandscape = document.getElementById('toggle-cam-landscape');
-const swapCamera = document.getElementById('swap-camera');
-const toggleScreenShareBtn = !IS_MOBILE ? document.getElementById('toggle-screen-share') : null;
-const toggleFullscreenBtn = !IS_MOBILE ? document.getElementById('toggle-fullscreen') : null;
-const copyBtnLandscape = document.getElementById('copy-landscape');
-const copyToast = document.getElementById('copy-toast');
-const remotePlayButton = document.getElementById('remote-play-button')
-const remotePlayButtonOverlay = document.getElementById('remote-play-overlay');
-const unsupportedBrowserModal = document.getElementById('unsupported-browser-modal');
-const modalShareLinkBtn = document.getElementById('modal-share-link');
-const modalBrowserName = document.getElementById('browser-name');
-const mobileHeader = document.getElementById('mobile-header');
-const mobileStatusColumn = document.getElementById('mobile-status-column');
-const mobileButtonsColumn = document.getElementById('mobile-buttons-column');
-const mobileFooter = document.getElementById('mobile-footer');
-const appRoot = document.getElementById('app-root');
+const roomEl = /** @type {HTMLElement} */ (document.getElementById('room-id'));
+const copyBtn = /** @type {HTMLElement} */ (document.getElementById('copy'));
+const statusEl = /** @type {HTMLElement | null} */ (document.getElementById('status'));
+const statusLandscapeEl = /** @type {HTMLElement | null} */ (document.getElementById('status-landscape'));
+const statusBaseClasses = statusEl?.dataset['statusBase'] || statusLandscapeEl?.dataset['statusBase'] || '';
+const localVideos = /** @type {HTMLVideoElement[]} */ (Array.from(document.querySelectorAll('[data-local-video]')));
+const remoteVideo = /** @type {HTMLVideoElement} */ (document.querySelector('[data-remote-video]'));
+const toggleMic = /** @type {HTMLElement} */ (document.getElementById('toggle-mic'));
+const toggleCam = /** @type {HTMLElement} */ (document.getElementById('toggle-cam'));
+const toggleMicLandscape = /** @type {HTMLElement | null} */ (document.getElementById('toggle-mic-landscape'));
+const toggleCamLandscape = /** @type {HTMLElement | null} */ (document.getElementById('toggle-cam-landscape'));
+const swapCamera = /** @type {HTMLElement | null} */ (document.getElementById('swap-camera'));
+const toggleScreenShareBtn = !IS_MOBILE ? /** @type {HTMLElement | null} */ (document.getElementById('toggle-screen-share')) : null;
+const toggleFullscreenBtn = !IS_MOBILE ? /** @type {HTMLElement | null} */ (document.getElementById('toggle-fullscreen')) : null;
+const copyBtnLandscape = /** @type {HTMLElement | null} */ (document.getElementById('copy-landscape'));
+const copyToast = /** @type {HTMLElement} */ (document.getElementById('copy-toast'));
+const remotePlayButton = /** @type {HTMLElement} */ (document.getElementById('remote-play-button'))
+const remotePlayButtonOverlay = /** @type {HTMLElement} */ (document.getElementById('remote-play-overlay'));
+const unsupportedBrowserModal = /** @type {HTMLElement} */ (document.getElementById('unsupported-browser-modal'));
+const modalShareLinkBtn = /** @type {HTMLElement} */ (document.getElementById('modal-share-link'));
+const modalBrowserName = /** @type {HTMLElement} */ (document.getElementById('browser-name'));
+const mobileHeader = /** @type {HTMLElement | null} */ (document.getElementById('mobile-header'));
+const mobileStatusColumn = /** @type {HTMLElement | null} */ (document.getElementById('mobile-status-column'));
+const mobileButtonsColumn = /** @type {HTMLElement | null} */ (document.getElementById('mobile-buttons-column'));
+const mobileFooter = /** @type {HTMLElement | null} */ (document.getElementById('mobile-footer'));
+const appRoot = /** @type {HTMLElement | null} */ (document.getElementById('app-root'));
 let isReconnecting = false;
 let isShuttingDown = false;
-const mobileOverlay = IS_MOBILE ? document.querySelector('[data-mobile-overlay]') : null;
-const desktopOverlay = !IS_MOBILE ? document.getElementById('desktop-overlay') : null;
-const selfOverlay = mobileOverlay;
-const overlayBoundary = mobileOverlay ? mobileOverlay.closest('[data-overlay-boundary]') : null;
+const mobileOverlay = IS_MOBILE ? /** @type {HTMLElement | null} */ (document.querySelector('[data-mobile-overlay]')) : null;
+const desktopOverlay = /** @type {HTMLElement} */ (!IS_MOBILE ? document.getElementById('desktop-overlay') : null);
+const selfOverlay = /** @type {HTMLElement} */ (mobileOverlay);
+const overlayBoundary = mobileOverlay ? /** @type {HTMLElement | null} */ (mobileOverlay.closest('[data-overlay-boundary]')) : null;
+/** @type {{pointerId: number, startX: number, startY: number, startLeft: number, startTop: number, maxLeft: number, maxTop: number} | null} */
 let overlayDragState = null;
 let overlayInitialized = false;
 const overlayPointers = selfOverlay ? new Map() : null;
+/** @type {{baseDistance: number, startWidth: number} | null} */
 let overlayPinchState = null;
 const PORTRAIT_OVERLAY_ASPECT = 12 / 9;
 const LANDSCAPE_OVERLAY_ASPECT = 9 / 16;
@@ -89,22 +98,30 @@ function applyMobileLandscapeLayout() {
     }
   }
 }
+/** @type {ReturnType<typeof setTimeout> | undefined} */
 let copyToastVisibleTimer;
-let pcReady
+/** @type {Promise<RTCPeerConnection>} */
+let pcReady;
 let pcGeneration = 0;
+/** @type {RTCIceCandidateInit[]} */
 let pendingIceCandidates = [];
+/** @type {MediaStream} */
 let localStream;
 let isInitiator = false;
 let isScreenSharing = false;
+/** @type {MediaStream | null} */
 let screenStream = null;
+/** @type {MediaStreamTrack | null} */
 let savedCameraTrack = null;
 const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+/** @type {WebSocket} */
 let ws;
-const videoContainer = document.getElementById('video-container');
-const localVideoContainer = document.getElementById('local-video-container');
-const remoteVideoContainer = document.getElementById('remote-video-container');
-const toggleLayoutBtn = document.getElementById('toggle-layout');
+const videoContainer = /** @type {HTMLElement | null} */ (document.getElementById('video-container'));
+const localVideoContainer = /** @type {HTMLElement | null} */ (document.getElementById('local-video-container'));
+const remoteVideoContainer = /** @type {HTMLElement | null} */ (document.getElementById('remote-video-container'));
+const toggleLayoutBtn = /** @type {HTMLElement | null} */ (document.getElementById('toggle-layout'));
 let desktopLayout = 'side-by-side'; // 'side-by-side' or 'overlay'
+/** @type {{pointerId: number, startX: number, startY: number, startLeft: number, startTop: number, maxLeft: number, maxTop: number} | null} */
 let desktopOverlayDragState = null;
 let desktopOverlayInitialized = false;
 const desktopOverlayPointers = desktopOverlay ? new Map() : null;
@@ -179,7 +196,7 @@ async function shareMeetingLink() {
     window.prompt('Copy meeting link:', location.href);
   } catch (err) {
     // If share was cancelled or failed, try clipboard as fallback
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       // User cancelled share dialog, do nothing
       return;
     }
@@ -197,14 +214,19 @@ async function shareMeetingLink() {
   }
 }
 
+/**
+ * @param {string} browserName
+ */
 function showUnsupportedBrowserModal(browserName) {
-  if (!unsupportedBrowserModal) return;
   if (browserName) {
     modalBrowserName.textContent = browserName;
   }
   unsupportedBrowserModal.classList.remove('hidden');
 }
 
+/**
+ * @param {string} reason
+ */
 function scheduleReconnect(reason) {
   if (isShuttingDown || isReconnecting) return;
   isReconnecting = true;
@@ -280,6 +302,9 @@ function clampOverlayToBounds() {
   if (!Number.isNaN(nextTop)) selfOverlay.style.top = `${nextTop}px`;
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleOverlayPointerDown(event) {
   if (!selfOverlay || !overlayBoundary) return;
   if (!canDragOverlay(event)) return;
@@ -306,6 +331,9 @@ function handleOverlayPointerDown(event) {
   event.preventDefault();
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleOverlayPointerMove(event) {
   if (overlayPointers && overlayPointers.has(event.pointerId)) {
     overlayPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -325,6 +353,9 @@ function handleOverlayPointerMove(event) {
   event.preventDefault();
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleOverlayPointerUp(event) {
   let shouldClamp = false;
   if (overlayPointers) {
@@ -337,15 +368,18 @@ function handleOverlayPointerUp(event) {
     }
   }
   if (overlayDragState && event.pointerId === overlayDragState.pointerId) {
-    selfOverlay.releasePointerCapture(event.pointerId)
+    selfOverlay.releasePointerCapture(event.pointerId);
     overlayDragState = null;
     shouldClamp = true;
   } else {
-    selfOverlay.releasePointerCapture(event.pointerId)
+    selfOverlay.releasePointerCapture(event.pointerId);
   }
   if (shouldClamp) clampOverlayToBounds();
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function canDragOverlay(event) {
   if (event.pointerType) {
     return event.pointerType === 'touch';
@@ -452,7 +486,7 @@ function toggleDesktopLayout() {
 function applyDesktopLayout() {
   if (!videoContainer || !toggleLayoutBtn) return;
 
-  videoContainer.dataset.layout = desktopLayout;
+  videoContainer.dataset['layout'] = desktopLayout;
 
   const gridIcon = toggleLayoutBtn.querySelector('[data-icon="layout-grid"]');
   const overlayIcon = toggleLayoutBtn.querySelector('[data-icon="layout-overlay"]');
@@ -536,6 +570,9 @@ function clampDesktopOverlayToBounds() {
   if (!Number.isNaN(nextTop)) desktopOverlay.style.top = `${nextTop}px`;
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleDesktopOverlayPointerDown(event) {
   if (!desktopOverlay || !remoteVideoContainer) return;
 
@@ -559,6 +596,9 @@ function handleDesktopOverlayPointerDown(event) {
   event.preventDefault();
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleDesktopOverlayPointerMove(event) {
   if (!desktopOverlayDragState || event.pointerId !== desktopOverlayDragState.pointerId) return;
 
@@ -573,6 +613,9 @@ function handleDesktopOverlayPointerMove(event) {
   event.preventDefault();
 }
 
+/**
+ * @param {PointerEvent} event
+ */
 function handleDesktopOverlayPointerUp(event) {
   if (desktopOverlayPointers) {
     desktopOverlayPointers.delete(event.pointerId);
@@ -587,6 +630,10 @@ function handleDesktopOverlayPointerUp(event) {
   }
 }
 
+/**
+ * @param {'waiting' | 'connecting' | 'connected' | 'failed' | 'disconnected' | 'room_is_full' | 'camera_mic_error'} key
+ * @param {'ok' | 'bad' | 'waiting'} mode
+ */
 function setStatus(key, mode) {
   const labels = {
     waiting: 'Waiting for peer',
@@ -615,7 +662,7 @@ function setStatus(key, mode) {
   }
   if (statusLandscapeEl) {
     statusLandscapeEl.textContent = label;
-    const landscapeClasses = statusLandscapeEl.dataset.statusBase || '';
+    const landscapeClasses = statusLandscapeEl.dataset['statusBase'] || '';
     statusLandscapeEl.className = `${landscapeClasses} ${variants[mode]} [writing-mode:vertical-lr] rotate-180`.trim();
   }
 }
@@ -719,6 +766,9 @@ function isLikelyRussianUser() {
   return russianTimezones.includes(timezone) || isRussianLanguage;
 }
 
+/**
+ * @param {string} reason
+ */
 async function setupPeerConnection(reason) {
   beacon('setup_peer_connection', { reason });
 
@@ -729,7 +779,8 @@ async function setupPeerConnection(reason) {
   // Clear pending ICE candidates from previous connection
   pendingIceCandidates = [];
 
-  let resolvePcReady;
+  /** @type {(pc: RTCPeerConnection) => void} */
+  let resolvePcReady = () => {};
   const oldPcReady = pcReady;
   pcReady = new Promise((resolve) => {
     resolvePcReady = resolve;
@@ -755,12 +806,14 @@ async function setupPeerConnection(reason) {
     iceServers.push({ urls: 'stun:stun.l.google.com:19302' });
   }
   const resp = await fetch('/turn', { cache: 'no-store' });
+  /** @type {{iceServers: Array<{urls: string | string[], username?: string, credential?: string}>}} */
   const data = await resp.json();
-  data.iceServers.forEach(iceServer => {
+  data.iceServers.forEach((iceServer) => {
     if (isLikelyRussianUser()) {
+      const urls = Array.isArray(iceServer.urls) ? iceServer.urls : [iceServer.urls];
       iceServers.push({
         ...iceServer,
-        ...{ urls: iceServer.urls.filter(url => !url.match('transport=udp')) }
+        urls: urls.filter((url) => !url.match('transport=udp'))
       })
     } else {
       iceServers.push(iceServer)
@@ -770,8 +823,9 @@ async function setupPeerConnection(reason) {
   const pc = new RTCPeerConnection({ iceServers });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
-    if (remoteVideo.srcObject !== e.streams[0]) {
-      remoteVideo.srcObject = e.streams[0];
+    const stream = e.streams[0];
+    if (remoteVideo && stream && remoteVideo.srcObject !== stream) {
+      remoteVideo.srcObject = stream;
     }
   };
   pc.onicecandidate = (e) => {
@@ -785,7 +839,7 @@ async function setupPeerConnection(reason) {
       beacon('ice_state_change:peer_connected', { state: pc.iceConnectionState });
     }
     if (pc.iceConnectionState === 'failed') {
-      setStatus('failed', 'bad', { state: 'failed' });
+      setStatus('failed', 'bad');
       scheduleReconnect('ice-failed');
     }
     if (pc.iceConnectionState === 'closed') {
@@ -802,9 +856,13 @@ async function setupPeerConnection(reason) {
   // This ensures m-lines order stays consistent across reconnections
   const videoTracks = localStream.getVideoTracks();
   const audioTracks = localStream.getAudioTracks();
-  [...videoTracks, ...audioTracks].forEach((t) => pc.addTrack(t, localStream));
+  const currentLocalStream = localStream;
+  [...videoTracks, ...audioTracks].forEach((t) => pc.addTrack(t, currentLocalStream));
 
-  resolvePcReady(pc);
+  if (resolvePcReady) {
+    resolvePcReady(pc);
+  }
+  // @ts-ignore - Adding custom property to track peer connection generation
   pc._generation = currentGeneration;
 }
 
@@ -822,10 +880,14 @@ async function makeOffer() {
   send('offer', offer);
 }
 
+/**
+ * @param {RTCSessionDescriptionInit} offer
+ */
 async function onOffer(offer) {
   const pc = await pcReady;
 
   // Ignore offers from old peer connection generations
+  // @ts-ignore - Accessing custom property
   const expectedGeneration = pc._generation;
   if (expectedGeneration !== pcGeneration) {
     console.warn('Ignoring offer from old peer connection generation');
@@ -845,10 +907,14 @@ async function onOffer(offer) {
   send('answer', answer);
 }
 
+/**
+ * @param {RTCSessionDescriptionInit} answer
+ */
 async function onAnswer(answer) {
   const pc = await pcReady;
 
   // Ignore answers from old peer connection generations
+  // @ts-ignore - Accessing custom property
   const expectedGeneration = pc._generation;
   if (expectedGeneration !== pcGeneration) {
     console.warn('Ignoring answer from old peer connection generation');
@@ -866,10 +932,14 @@ async function onAnswer(answer) {
   await flushPendingIceCandidates();
 }
 
+/**
+ * @param {RTCIceCandidateInit} candidate
+ */
 async function onCandidate(candidate) {
   const pc = await pcReady;
 
   // Ignore candidates from old peer connection generations
+  // @ts-ignore - Accessing custom property
   const expectedGeneration = pc._generation;
   if (expectedGeneration !== pcGeneration) {
     console.warn('Ignoring ICE candidate from old peer connection generation');
@@ -897,6 +967,10 @@ async function flushPendingIceCandidates() {
   }
 }
 
+/**
+ * @param {string} type
+ * @param {RTCSessionDescriptionInit | RTCIceCandidateInit | null} [payload]
+ */
 function send(type, payload) {
   ws.send(JSON.stringify({ type, payload }));
 }
@@ -913,7 +987,7 @@ function updateMicButton() {
 
   // Update portrait button
   if (toggleMic) {
-    toggleMic.dataset.state = enabled ? 'on' : 'off';
+    toggleMic.dataset['state'] = enabled ? 'on' : 'off';
     toggleMic.setAttribute('aria-pressed', String(!enabled));
     toggleMic.setAttribute('aria-label', label);
     const sr = toggleMic.querySelector('[data-label]');
@@ -926,7 +1000,7 @@ function updateMicButton() {
 
   // Update landscape button
   if (toggleMicLandscape) {
-    toggleMicLandscape.dataset.state = enabled ? 'on' : 'off';
+    toggleMicLandscape.dataset['state'] = enabled ? 'on' : 'off';
     toggleMicLandscape.setAttribute('aria-pressed', String(!enabled));
     toggleMicLandscape.setAttribute('aria-label', label);
     const sr = toggleMicLandscape.querySelector('[data-label]');
@@ -945,7 +1019,7 @@ function updateCamButton() {
 
   // Update portrait button
   if (toggleCam) {
-    toggleCam.dataset.state = enabled ? 'on' : 'off';
+    toggleCam.dataset['state'] = enabled ? 'on' : 'off';
     toggleCam.setAttribute('aria-pressed', String(!enabled));
     toggleCam.setAttribute('aria-label', label);
     const sr = toggleCam.querySelector('[data-label]');
@@ -958,7 +1032,7 @@ function updateCamButton() {
 
   // Update landscape button
   if (toggleCamLandscape) {
-    toggleCamLandscape.dataset.state = enabled ? 'on' : 'off';
+    toggleCamLandscape.dataset['state'] = enabled ? 'on' : 'off';
     toggleCamLandscape.setAttribute('aria-pressed', String(!enabled));
     toggleCamLandscape.setAttribute('aria-label', label);
     const sr = toggleCamLandscape.querySelector('[data-label]');
@@ -976,7 +1050,7 @@ async function swapCameraFacing() {
   const videoTracks = localStream.getVideoTracks();
   if (videoTracks.length === 0) return;
 
-  const currentTrack = videoTracks[0];
+  const currentTrack = /** @type {MediaStreamTrack} */ (videoTracks[0]);
   const currentFacingMode = currentTrack.getSettings().facingMode;
   const newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
 
@@ -990,7 +1064,7 @@ async function swapCameraFacing() {
   });
 
   // Replace video track in existing stream
-  const newVideoTrack = newStream.getVideoTracks()[0];
+  const newVideoTrack = /** @type {MediaStreamTrack} */ (newStream.getVideoTracks()[0]);
   const audioTracks = localStream.getAudioTracks();
 
   // Create new stream with new video track and existing audio tracks
@@ -1022,10 +1096,10 @@ async function startScreenShare() {
     video: true
   });
 
-  const screenTrack = screenStream.getVideoTracks()[0];
+  const screenTrack = /** @type {MediaStreamTrack} */ (screenStream.getVideoTracks()[0]);
 
   // Save current camera track
-  savedCameraTrack = localStream.getVideoTracks()[0];
+  savedCameraTrack = localStream.getVideoTracks()[0] || null;
 
   // Replace video track in peer connection
   if (pcReady) {
@@ -1070,7 +1144,7 @@ async function stopScreenShare() {
 
   // Update local video elements to show camera
   for (const videoEl of localVideos) {
-    videoEl.srcObject = localStream;
+    videoEl.srcObject = localStream || null;
   }
 
   savedCameraTrack = null;
@@ -1083,7 +1157,7 @@ function updateScreenShareButton() {
 
   const label = isScreenSharing ? 'Stop sharing' : 'Share screen';
 
-  toggleScreenShareBtn.dataset.state = isScreenSharing ? 'on' : 'off';
+  toggleScreenShareBtn.dataset['state'] = isScreenSharing ? 'on' : 'off';
   toggleScreenShareBtn.setAttribute('aria-label', label);
 
   const sr = toggleScreenShareBtn.querySelector('[data-label]');
@@ -1125,9 +1199,11 @@ function updateFullscreenButton() {
 }
 
 window.addEventListener('load', () => {
+  // @ts-ignore - Adding custom property to window
   if (window.meetingJsLoaded) {
     return
   }
+  // @ts-ignore - Adding custom property to window
   window.meetingJsLoaded = true
 
   // Check for unsupported browser
@@ -1155,10 +1231,11 @@ window.addEventListener('load', () => {
   remoteVideo.addEventListener('error', (e) => {
     console.error('remote video error', e);
 
+    // @ts-ignore - Checking for message property
     if (e?.message && e.message.includes('play() can only be initiated by a user gesture')) {
       remotePlayButtonOverlay.classList.remove('hidden');
     }
-  })
+  });
 
   remotePlayButton.addEventListener('click', () => {
     remoteVideo.play().then(() => {
@@ -1218,9 +1295,7 @@ window.addEventListener('load', () => {
 
   localStorage.setItem('mini-meet:last-room', roomId);
 
-  if (roomEl) {
-    roomEl.textContent = `Room: ${roomId}`;
-  }
+  roomEl.textContent = `Room: ${roomId}`;
 
   copyBtn.addEventListener('click', shareMeetingLink);
 
@@ -1238,13 +1313,9 @@ window.addEventListener('load', () => {
     updateCamButton();
   };
 
-  if (toggleMic) {
-    toggleMic.addEventListener('click', toggleMicHandler);
-  }
+  toggleMic.addEventListener('click', toggleMicHandler);
 
-  if (toggleCam) {
-    toggleCam.addEventListener('click', toggleCamHandler);
-  }
+  toggleCam.addEventListener('click', toggleCamHandler);
 
   // Landscape button listeners
   if (toggleMicLandscape) {

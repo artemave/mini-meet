@@ -1,17 +1,18 @@
 const STORAGE_KEY = 'mini-meet:last-room';
-const installHint = document.querySelector('[data-install-hint]');
-const lastMeetingBtn = document.querySelector('[data-last-meeting]');
+const installHint = /** @type {HTMLElement | null} */ (document.querySelector('[data-install-hint]'));
+const lastMeetingBtn = /** @type {HTMLAnchorElement | null} */ (document.querySelector('[data-last-meeting]'));
 
 function getInstallHintMessage() {
   if (!navigator) return 'Tip: open your browser menu and choose Add to Home Screen.';
+
   const ua = navigator.userAgent || '';
-  const platform = navigator.userAgentData?.platform || navigator.platform || '';
+  const platform = (/** @type {any} */ (navigator).userAgentData)?.platform;
   const isIOS = /iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/.test(ua);
   const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|Edg|OPR|Android/.test(ua);
   const isFirefox = /Firefox|FxiOS/.test(ua);
   const isEdge = /Edg/.test(ua);
-  const isChrome = (/Chrome|Chromium|CriOS/.test(ua) || navigator.userAgentData?.brands?.some((b) => /Chrom(e|ium)/i.test(b.brand))) && !isEdge;
+  const isChrome = (/Chrome|Chromium|CriOS/.test(ua) || (/** @type {any} */ (navigator).userAgentData)?.brands?.some((/** @type {any} */ b) => /Chrom(e|ium)/i.test(b.brand))) && !isEdge;
   const isSamsung = /SamsungBrowser/i.test(ua);
   const isDesktop = !isIOS && !isAndroid;
 

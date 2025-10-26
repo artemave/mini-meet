@@ -2,17 +2,26 @@ import html from 'nanohtml';
 import rollbarSnippet from './rollbar.html.js';
 import posthogSnippet from './posthog.html.js';
 
+/**
+ * @param {{
+ *   title?: string,
+ *   head?: string | any,
+ *   body?: string | any,
+ *   rollbar?: { clientAccessToken?: string, environment?: string },
+ *   posthog?: { apiKey?: string, apiHost?: string }
+ * }} params
+ */
 export default function layout({
   title = 'Mini Meet',
   head = '',
   body = '',
   rollbar = {
-    clientAccessToken: process.env.ROLLBAR_CLIENT_ACCESS_TOKEN,
-    environment: process.env.ROLLBAR_ENVIRONMENT || 'development',
+    clientAccessToken: process.env['ROLLBAR_CLIENT_ACCESS_TOKEN'] || undefined,
+    environment: process.env['ROLLBAR_ENVIRONMENT'] || 'development',
   },
   posthog = {
-    apiKey: process.env.POSTHOG_API_KEY,
-    apiHost: process.env.POSTHOG_API_HOST || '/ph',
+    apiKey: process.env['POSTHOG_API_KEY'] || undefined,
+    apiHost: process.env['POSTHOG_API_HOST'] || '/ph',
   }
 }) {
   return html`

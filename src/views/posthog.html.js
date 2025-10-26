@@ -1,5 +1,8 @@
 import html from 'nanohtml';
 
+/**
+ * @param {{ apiKey?: string, apiHost?: string }} params
+ */
 export default function posthogSnippet({ apiKey, apiHost }) {
   if (!apiKey) {
     return html``;

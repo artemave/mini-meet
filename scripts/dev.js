@@ -21,7 +21,7 @@ async function getAvahiHostname() {
 }
 
 async function main() {
-  const port = process.env.PORT || '3003';
+  const port = process.env['PORT'] || '3003';
 
   // Get .local hostname
   const avahiHostname = await getAvahiHostname();
@@ -40,7 +40,7 @@ async function main() {
   try {
     await execAsync(`mkcert -key-file certs/key.pem -cert-file certs/cert.pem ${certHosts}`);
   } catch (err) {
-    console.error('Failed to generate certificate:', err.message);
+    console.error('Failed to generate certificate:', err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 
