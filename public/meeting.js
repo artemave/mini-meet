@@ -1296,7 +1296,9 @@ window.addEventListener('load', () => {
 
   localStorage.setItem('mini-meet:last-room', roomId);
 
-  roomEl.textContent = `Room: ${roomId}`;
+  if (roomEl) {
+    roomEl.textContent = `Room: ${roomId}`;
+  }
 
   copyBtn.addEventListener('click', shareMeetingLink);
 
