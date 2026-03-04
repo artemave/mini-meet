@@ -771,7 +771,9 @@ function isLikelyRussianUser() {
  * @param {string} reason
  */
 async function setupPeerConnection(reason) {
-  beacon('setup_peer_connection', { reason });
+  const likelyRussianUser = isLikelyRussianUser();
+  const forceRelay = likelyRussianUser;
+  beacon('setup_peer_connection', { reason, forceRelay });
 
   // Increment generation to invalidate old signaling messages
   pcGeneration++;
@@ -803,14 +805,14 @@ async function setupPeerConnection(reason) {
   const iceServers = [];
 
   // Only include Google STUN server for non-Russian users
-  if (!isLikelyRussianUser()) {
+  if (!likelyRussianUser) {
     iceServers.push({ urls: 'stun:stun.l.google.com:19302' });
   }
   const resp = await fetch('/turn', { cache: 'no-store' });
   /** @type {{iceServers: Array<{urls: string | string[], username?: string, credential?: string}>}} */
   const data = await resp.json();
   data.iceServers.forEach((iceServer) => {
-    if (isLikelyRussianUser()) {
+    if (likelyRussianUser) {
       const urls = Array.isArray(iceServer.urls) ? iceServer.urls : [iceServer.urls];
       iceServers.push({
         ...iceServer,
@@ -821,7 +823,14 @@ async function setupPeerConnection(reason) {
     }
   })
 
-  const pc = new RTCPeerConnection({ iceServers });
+  if (forceRelay && !iceServers.length) {
+    beacon('relay_only_without_turn', { reason });
+  }
+
+  const pc = new RTCPeerConnection({
+    iceServers,
+    iceTransportPolicy: forceRelay ? 'relay' : 'all',
+  });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
     const stream = e.streams[0];

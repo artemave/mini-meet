@@ -217,5 +217,14 @@ describe('HTTP Endpoints Integration Tests', () => {
       const js = await res.text();
       assert.ok(js.includes('"/rollbar/rollbar.min.js"'), 'should use local Rollbar proxy');
     });
+
+    it('should ship relay-only support for likely Russian users', async () => {
+      const res = await fetch(baseUrl + '/meeting.js');
+      assert.strictEqual(res.status, 200);
+
+      const js = await res.text();
+      assert.ok(js.includes("iceTransportPolicy: forceRelay ? 'relay' : 'all'"), 'should force relay when needed');
+      assert.ok(js.includes('relay_only_without_turn'), 'should log when relay-only lacks TURN');
+    });
   });
 });
