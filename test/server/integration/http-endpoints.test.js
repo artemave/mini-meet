@@ -28,6 +28,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.length > 100, 'should have content');
       assert.ok(html.includes('client_resource_error'), 'should include resource error probe');
       assert.ok(html.includes('id="landing-app-script"'), 'should tag landing app script');
+      assert.ok(html.includes('id="rollbar-bootstrap" src="/rollbar-snippet.js" defer'), 'should defer rollbar bootstrap');
     });
 
     it('should set no-cache headers', async () => {
@@ -66,6 +67,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.includes('<!DOCTYPE html>'), 'should be HTML');
       assert.ok(html.includes('test123'), 'should include room ID in page');
       assert.ok(html.includes('id="meeting-app-script"'), 'should tag meeting app script');
+      assert.ok(html.includes('id="rollbar-bootstrap" src="/rollbar-snippet.js" defer'), 'should defer rollbar bootstrap');
     });
 
     it('should detect mobile user-agent', async () => {

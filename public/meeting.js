@@ -1208,7 +1208,7 @@ function updateFullscreenButton() {
   if (iconExit) iconExit.classList.toggle('hidden', !isFullscreen);
 }
 
-window.addEventListener('load', () => {
+function bootstrapMeeting() {
   // @ts-ignore - Adding custom property to window
   if (window.meetingJsLoaded) {
     return
@@ -1380,4 +1380,10 @@ window.addEventListener('load', () => {
       console.error('Failed to start local media:', err);
     });
   }
-})
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrapMeeting, { once: true });
+} else {
+  bootstrapMeeting();
+}
