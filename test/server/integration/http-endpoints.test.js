@@ -68,6 +68,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.includes('test123'), 'should include room ID in page');
       assert.ok(html.includes('id="meeting-app-script"'), 'should tag meeting app script');
       assert.ok(html.includes('id="rollbar-bootstrap" src="/rollbar-snippet.js" defer'), 'should defer rollbar bootstrap');
+      assert.ok(html.includes("/probe/meeting-inline"), 'should include inline meeting boot probe');
     });
 
     it('should detect mobile user-agent', async () => {
@@ -204,6 +205,13 @@ describe('HTTP Endpoints Integration Tests', () => {
     });
   });
 
+  describe('GET /probe/:stage', () => {
+    it('should accept early boot probes', async () => {
+      const res = await fetch(baseUrl + '/probe/meeting-inline');
+      assert.strictEqual(res.status, 204);
+    });
+  });
+
   describe('Static files', () => {
     it('should serve files from public directory', async () => {
       // Assuming there's a robots.txt or similar static file
@@ -227,6 +235,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       const js = await res.text();
       assert.ok(js.includes("iceTransportPolicy: forceRelay ? 'relay' : 'all'"), 'should force relay when needed');
       assert.ok(js.includes('relay_only_without_turn'), 'should log when relay-only lacks TURN');
+      assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting.js starts executing');
     });
   });
 });

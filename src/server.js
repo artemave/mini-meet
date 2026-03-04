@@ -192,6 +192,11 @@ export function createServer() {
     res.status(204).end();
   });
 
+  // Tiny GET probe endpoint for very early client boot diagnostics.
+  app.get('/probe/:stage', (_req, res) => {
+    res.status(204).end();
+  });
+
   // TURN REST credentials endpoint
   app.get('/turn', (req, res) => {
     const urlsEnv = process.env['TURN_URLS'] || '';
