@@ -611,7 +611,7 @@ export default function meetingView({ roomId, isMobile = false }) {
       </footer>
     </div>
     <script>window.__IS_MOBILE__ = ${isMobile};</script>
-    <script src="/meeting.js"></script>
+    <script id="meeting-app-script" src="/meeting.js"></script>
   `;
 
   return layout({ title: `Meeting - ${roomId}`, body });

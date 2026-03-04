@@ -13,6 +13,6 @@ export default function rollbarSnippet({ clientAccessToken, environment }) {
       window.ROLLBAR_CLIENT_ACCESS_TOKEN = "${clientAccessToken}";
       window.ROLLBAR_ENVIRONMENT = "${environment}";
     </script>
-    <script src="/rollbar-snippet.js"></script>
+    <script id="rollbar-bootstrap" src="/rollbar-snippet.js"></script>
   `;
 }

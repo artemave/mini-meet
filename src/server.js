@@ -128,6 +128,13 @@ export function createServer() {
   const publicDir = path.join(__dirname, '..', 'public');
   app.use(express.static(publicDir));
 
+  // Proxy Rollbar through the app so clients do not hit the CDN directly.
+  app.use('/rollbar/rollbar.min.js', createProxyMiddleware({
+    target: 'https://cdn.rollbar.com',
+    changeOrigin: true,
+    pathRewrite: () => '/rollbarjs/refs/tags/v2.26.4/rollbar.min.js',
+  }));
+
   // Create new meeting and redirect to unique URL
   app.get('/new', (_req, res) => {
     const id = crypto.randomBytes(6).toString('base64url'); // short, URL-safe

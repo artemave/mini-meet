@@ -52,7 +52,7 @@ export default function indexView() {
       <footer class="relative z-10 flex justify-center pb-6 text-xs text-slate-500">
         <a href="https://artem.rocks/" class="hover:text-slate-400 transition-colors">Made by Artem</a>
       </footer>
-      <script src="/index.js"></script>
+      <script id="landing-app-script" src="/index.js"></script>
     </div>
   `;
 

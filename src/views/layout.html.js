@@ -40,6 +40,58 @@ export default function layout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.webmanifest" />
+        <script>
+          (function () {
+            function send(event, context) {
+              var payload = JSON.stringify({ event: event, context: context });
+
+              try {
+                if (navigator.sendBeacon) {
+                  var blob = new Blob([payload], { type: 'application/json' });
+                  navigator.sendBeacon('/log', blob);
+                  return;
+                }
+              } catch (_) {}
+
+              try {
+                fetch('/log', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: payload,
+                  keepalive: true
+                });
+              } catch (_) {}
+            }
+
+            window.addEventListener('error', function (event) {
+              var target = event.target;
+              if (!target || target === window) return;
+
+              var tagName = target.tagName ? String(target.tagName).toLowerCase() : '';
+              if (!tagName) return;
+
+              var url = target.src || target.href || target.currentSrc || '';
+              if (!url) return;
+
+              send('client_resource_error', {
+                tagName: tagName,
+                url: url,
+                id: target.id || '',
+                className: typeof target.className === 'string' ? target.className : '',
+                page: location.pathname
+              });
+            }, true);
+
+            window.addEventListener('securitypolicyviolation', function (event) {
+              send('client_securitypolicyviolation', {
+                blockedUri: event.blockedURI || '',
+                directive: event.effectiveDirective || event.violatedDirective || '',
+                sourceFile: event.sourceFile || '',
+                page: location.pathname
+              });
+            });
+          }());
+        </script>
         ${rollbarSnippet(rollbar)}
         ${posthogSnippet(posthog)}
         ${head}
