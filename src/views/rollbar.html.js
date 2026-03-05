@@ -14,6 +14,6 @@ export default function rollbarSnippet({ clientAccessToken, environment, jsUrl }
       window.ROLLBAR_ENVIRONMENT = "${environment}";
       window.ROLLBAR_CLIENT_JS_URL = "${jsUrl || '/_rb/7c.js'}";
     </script>
-    <script id="rollbar-bootstrap" src="/rollbar-snippet.js" defer></script>
+    <script id="rollbar-bootstrap" src="/core-9a1.js" defer></script>
   `;
 }
