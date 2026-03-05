@@ -28,7 +28,6 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.length > 100, 'should have content');
       assert.ok(html.includes('client_resource_error'), 'should include resource error probe');
       assert.ok(html.includes('id="landing-app-script"'), 'should tag landing app script');
-      assert.ok(html.includes('id="rollbar-bootstrap" src="/core-9a1.js" defer'), 'should defer rollbar bootstrap');
       assert.ok(html.includes("/probe/index-inline"), 'should include inline landing boot probe');
     });
 
@@ -68,7 +67,6 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.includes('<!DOCTYPE html>'), 'should be HTML');
       assert.ok(html.includes('test123'), 'should include room ID in page');
       assert.ok(html.includes('id="meeting-app-script"'), 'should tag meeting app script');
-      assert.ok(html.includes('id="rollbar-bootstrap" src="/core-9a1.js" defer'), 'should defer rollbar bootstrap');
       assert.ok(html.includes("/probe/meeting-inline"), 'should include inline meeting boot probe');
     });
 
@@ -219,14 +217,6 @@ describe('HTTP Endpoints Integration Tests', () => {
       const res = await fetch(baseUrl + '/sw.js');
       // May be 200 if file exists, or 404 if not
       assert.ok(res.status === 200 || res.status === 404);
-    });
-
-    it('should point rollbar bootstrap at the local proxy', async () => {
-      const res = await fetch(baseUrl + '/core-9a1.js');
-      assert.strictEqual(res.status, 200);
-
-      const js = await res.text();
-      assert.ok(js.includes('window.ROLLBAR_CLIENT_JS_URL||"/_rb/7c.js"'), 'should use obfuscated local Rollbar proxy');
     });
 
     it('should ship relay-only support for likely Russian users', async () => {

@@ -1,6 +1,4 @@
 import html from 'nanohtml';
-import rollbarSnippet from './rollbar.html.js';
-import posthogSnippet from './posthog.html.js';
 
 /**
  * @param {{
@@ -15,15 +13,6 @@ export default function layout({
   title = 'Mini Meet',
   head = '',
   body = '',
-  rollbar = {
-    clientAccessToken: process.env['ROLLBAR_CLIENT_ACCESS_TOKEN'] || undefined,
-    environment: process.env['ROLLBAR_ENVIRONMENT'] || 'development',
-    jsUrl: process.env['ROLLBAR_CLIENT_JS_URL'] || process.env['ROLLBAR_PROXY_JS_PATH'] || '/_rb/7c.js',
-  },
-  posthog = {
-    apiKey: process.env['POSTHOG_API_KEY'] || undefined,
-    apiHost: process.env['POSTHOG_API_HOST'] || process.env['POSTHOG_PROXY_BASE_PATH'] || '/_px/9v',
-  }
 }) {
   return html`
     <!DOCTYPE html>
@@ -93,8 +82,6 @@ export default function layout({
             });
           }());
         </script>
-        ${rollbarSnippet(rollbar)}
-        ${posthogSnippet(posthog)}
         ${head}
       </head>
       <body>
