@@ -84,6 +84,13 @@ export function createServer() {
     captureUnhandledRejections: true,
     environment: process.env['ROLLBAR_ENVIRONMENT'] || 'development',
   });
+  const configuredPosthogApiHost = process.env['POSTHOG_API_HOST'] || '';
+  const posthogProxyBasePath = configuredPosthogApiHost.startsWith('/')
+    ? configuredPosthogApiHost
+    : process.env['POSTHOG_PROXY_BASE_PATH'] || '/_px/9v';
+  const posthogStaticProxyPath = `${posthogProxyBasePath}/static`;
+  const configuredRollbarClientJsUrl = process.env['ROLLBAR_CLIENT_JS_URL'] || process.env['ROLLBAR_PROXY_JS_PATH'] || '/_rb/7c.js';
+  const rollbarProxyJsPath = configuredRollbarClientJsUrl.startsWith('/') ? configuredRollbarClientJsUrl : '/_rb/7c.js';
 
   // Disable all caching
   app.use((_req, res, next) => {
@@ -129,7 +136,7 @@ export function createServer() {
   app.use(express.static(publicDir));
 
   // Proxy Rollbar through the app so clients do not hit the CDN directly.
-  app.use('/rollbar/rollbar.min.js', createProxyMiddleware({
+  app.use(rollbarProxyJsPath, createProxyMiddleware({
     target: 'https://cdn.rollbar.com',
     changeOrigin: true,
     pathRewrite: () => '/rollbarjs/refs/tags/v2.26.4/rollbar.min.js',
@@ -162,18 +169,18 @@ export function createServer() {
   // - TURN_SECRET: shared secret configured in coturn (static-auth-secret)
   // - TURN_TTL: seconds until expiration (default 900)
   // PostHog analytics proxy endpoints
-  // Static assets proxy (MUST come before general /ph proxy)
-  app.use('/ph/static', createProxyMiddleware({
+  // Static assets proxy (MUST come before general PostHog API proxy).
+  app.use(posthogStaticProxyPath, createProxyMiddleware({
     target: 'https://eu-assets.i.posthog.com',
     changeOrigin: true,  // Sets Host header to eu-assets.i.posthog.com
-    pathRewrite: { '^/': '/static/' },  // Prepend /static to the path
+    pathRewrite: (path) => `/static${path}`,  // Prepend /static to the incoming path
   }));
 
   // PostHog API proxy
-  app.use('/ph', createProxyMiddleware({
+  app.use(posthogProxyBasePath, createProxyMiddleware({
     target: 'https://eu.i.posthog.com',
     changeOrigin: true,  // Sets Host header to eu.i.posthog.com
-    pathRewrite: { '^/ph': '' },
+    pathRewrite: (path) => path,
   }));
 
   // Client telemetry beacon endpoint

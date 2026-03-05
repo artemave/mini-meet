@@ -29,6 +29,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.includes('client_resource_error'), 'should include resource error probe');
       assert.ok(html.includes('id="landing-app-script"'), 'should tag landing app script');
       assert.ok(html.includes('id="rollbar-bootstrap" src="/rollbar-snippet.js" defer'), 'should defer rollbar bootstrap');
+      assert.ok(html.includes("/probe/index-inline"), 'should include inline landing boot probe');
     });
 
     it('should set no-cache headers', async () => {
@@ -225,7 +226,7 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.strictEqual(res.status, 200);
 
       const js = await res.text();
-      assert.ok(js.includes('"/rollbar/rollbar.min.js"'), 'should use local Rollbar proxy');
+      assert.ok(js.includes('window.ROLLBAR_CLIENT_JS_URL||"/_rb/7c.js"'), 'should use obfuscated local Rollbar proxy');
     });
 
     it('should ship relay-only support for likely Russian users', async () => {
@@ -236,6 +237,14 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(js.includes("iceTransportPolicy: forceRelay ? 'relay' : 'all'"), 'should force relay when needed');
       assert.ok(js.includes('relay_only_without_turn'), 'should log when relay-only lacks TURN');
       assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting.js starts executing');
+    });
+
+    it('should probe when index.js starts executing', async () => {
+      const res = await fetch(baseUrl + '/index.js');
+      assert.strictEqual(res.status, 200);
+
+      const js = await res.text();
+      assert.ok(js.includes("/probe/index-js-entry"), 'should probe when index.js starts executing');
     });
   });
 });

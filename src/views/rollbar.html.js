@@ -1,9 +1,9 @@
 import html from 'nanohtml';
 
 /**
- * @param {{ clientAccessToken?: string, environment?: string }} params
+ * @param {{ clientAccessToken?: string, environment?: string, jsUrl?: string }} params
  */
-export default function rollbarSnippet({ clientAccessToken, environment }) {
+export default function rollbarSnippet({ clientAccessToken, environment, jsUrl }) {
   if (!clientAccessToken) {
     return html``;
   }
@@ -12,6 +12,7 @@ export default function rollbarSnippet({ clientAccessToken, environment }) {
     <script>
       window.ROLLBAR_CLIENT_ACCESS_TOKEN = "${clientAccessToken}";
       window.ROLLBAR_ENVIRONMENT = "${environment}";
+      window.ROLLBAR_CLIENT_JS_URL = "${jsUrl || '/_rb/7c.js'}";
     </script>
     <script id="rollbar-bootstrap" src="/rollbar-snippet.js" defer></script>
   `;

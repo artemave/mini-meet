@@ -7,7 +7,7 @@ import posthogSnippet from './posthog.html.js';
  *   title?: string,
  *   head?: string | any,
  *   body?: string | any,
- *   rollbar?: { clientAccessToken?: string, environment?: string },
+ *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
  *   posthog?: { apiKey?: string, apiHost?: string }
  * }} params
  */
@@ -18,10 +18,11 @@ export default function layout({
   rollbar = {
     clientAccessToken: process.env['ROLLBAR_CLIENT_ACCESS_TOKEN'] || undefined,
     environment: process.env['ROLLBAR_ENVIRONMENT'] || 'development',
+    jsUrl: process.env['ROLLBAR_CLIENT_JS_URL'] || process.env['ROLLBAR_PROXY_JS_PATH'] || '/_rb/7c.js',
   },
   posthog = {
     apiKey: process.env['POSTHOG_API_KEY'] || undefined,
-    apiHost: process.env['POSTHOG_API_HOST'] || '/ph',
+    apiHost: process.env['POSTHOG_API_HOST'] || process.env['POSTHOG_PROXY_BASE_PATH'] || '/_px/9v',
   }
 }) {
   return html`
