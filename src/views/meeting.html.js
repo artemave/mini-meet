@@ -614,7 +614,7 @@ export default function meetingView({ roomId, isMobile = false }) {
       window.__IS_MOBILE__ = ${isMobile};
       (new Image()).src = '/probe/meeting-inline';
     </script>
-    <script id="meeting-app-script" src="/meeting.js"></script>
+    <script id="meeting-app-script" src="/app-m7.js"></script>
   `;
 
   return layout({ title: `Meeting - ${roomId}`, body });

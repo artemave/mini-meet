@@ -220,13 +220,13 @@ describe('HTTP Endpoints Integration Tests', () => {
     });
 
     it('should ship relay-only support for likely Russian users', async () => {
-      const res = await fetch(baseUrl + '/meeting.js');
+      const res = await fetch(baseUrl + '/app-m7.js');
       assert.strictEqual(res.status, 200);
 
       const js = await res.text();
       assert.ok(js.includes("iceTransportPolicy: forceRelay ? 'relay' : 'all'"), 'should force relay when needed');
       assert.ok(js.includes('relay_only_without_turn'), 'should log when relay-only lacks TURN');
-      assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting.js starts executing');
+      assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting script starts executing');
     });
 
     it('should probe when index.js starts executing', async () => {
