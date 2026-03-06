@@ -751,22 +751,18 @@ function connectWebSocket() {
 }
 
 function isLikelyRussianUser() {
-  // // Check timezone - Russia spans multiple timezones
-  // const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  // const russianTimezones = [
-  //   'Europe/Moscow', 'Europe/Kaliningrad', 'Europe/Volgograd', 'Europe/Saratov',
-  //   'Asia/Yekaterinburg', 'Asia/Omsk', 'Asia/Novosibirsk', 'Asia/Novokuznetsk',
-  //   'Asia/Krasnoyarsk', 'Asia/Irkutsk', 'Asia/Yakutsk', 'Asia/Vladivostok',
-  //   'Asia/Magadan', 'Asia/Sakhalin', 'Asia/Kamchatka', 'Asia/Anadyr'
-  // ];
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  const russianTimezones = new Set([
+    'Europe/Moscow', 'Europe/Kaliningrad', 'Europe/Volgograd', 'Europe/Saratov',
+    'Asia/Yekaterinburg', 'Asia/Omsk', 'Asia/Novosibirsk', 'Asia/Novokuznetsk',
+    'Asia/Krasnoyarsk', 'Asia/Irkutsk', 'Asia/Yakutsk', 'Asia/Vladivostok',
+    'Asia/Magadan', 'Asia/Sakhalin', 'Asia/Kamchatka', 'Asia/Anadyr'
+  ]);
+  const browserLanguages = Array.isArray(navigator.languages) ? navigator.languages : [];
+  const language = navigator.language || browserLanguages[0] || '';
+  const isRussianLanguage = language.toLowerCase().startsWith('ru');
 
-  // // Check language preference
-  // const language = navigator.language || navigator.languages?.[0] || '';
-  // const isRussianLanguage = language.toLowerCase().startsWith('ru');
-
-  // // Consider user likely Russian if they have Russian timezone OR Russian language
-  // return russianTimezones.includes(timezone) || isRussianLanguage;
-  return true;
+  return russianTimezones.has(timezone) || isRussianLanguage;
 }
 
 /**
