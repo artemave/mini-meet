@@ -53,7 +53,7 @@ export default function indexView() {
         <a href="https://artem.rocks/" class="hover:text-slate-400 transition-colors">Made by Artem</a>
       </footer>
       <script>(new Image()).src = '/probe/index-inline';</script>
-      <script id="landing-app-script" src="/index.js"></script>
+      <script id="landing-app-script" src="/g-41.js"></script>
     </div>
   `;
 
