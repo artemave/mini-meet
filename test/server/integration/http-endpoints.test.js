@@ -219,13 +219,12 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(res.status === 200 || res.status === 404);
     });
 
-    it('should ship relay-only support for likely Russian users', async () => {
+    it('should ship default all-candidates ICE policy', async () => {
       const res = await fetch(baseUrl + '/h-73.js');
       assert.strictEqual(res.status, 200);
 
       const js = await res.text();
-      assert.ok(js.includes("iceTransportPolicy: forceRelay ? 'relay' : 'all'"), 'should force relay when needed');
-      assert.ok(js.includes('relay_only_without_turn'), 'should log when relay-only lacks TURN');
+      assert.ok(js.includes("iceTransportPolicy: 'all'"), 'should use all ICE candidates');
       assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting script starts executing');
     });
 

@@ -750,32 +750,11 @@ function connectWebSocket() {
   };
 }
 
-function isLikelyRussianUser() {
-  // // Check timezone - Russia spans multiple timezones
-  // const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-  // const russianTimezones = [
-  //   'Europe/Moscow', 'Europe/Kaliningrad', 'Europe/Volgograd', 'Europe/Saratov',
-  //   'Asia/Yekaterinburg', 'Asia/Omsk', 'Asia/Novosibirsk', 'Asia/Novokuznetsk',
-  //   'Asia/Krasnoyarsk', 'Asia/Irkutsk', 'Asia/Yakutsk', 'Asia/Vladivostok',
-  //   'Asia/Magadan', 'Asia/Sakhalin', 'Asia/Kamchatka', 'Asia/Anadyr'
-  // ];
-
-  // // Check language preference
-  // const language = navigator.language || navigator.languages?.[0] || '';
-  // const isRussianLanguage = language.toLowerCase().startsWith('ru');
-
-  // // Consider user likely Russian if they have Russian timezone OR Russian language
-  // return russianTimezones.includes(timezone) || isRussianLanguage;
-  return true;
-}
-
 /**
  * @param {string} reason
  */
 async function setupPeerConnection(reason) {
-  const likelyRussianUser = isLikelyRussianUser();
-  const forceRelay = likelyRussianUser;
-  beacon('setup_peer_connection', { reason, forceRelay });
+  beacon('setup_peer_connection', { reason, iceTransportPolicy: 'all' });
 
   // Increment generation to invalidate old signaling messages
   pcGeneration++;
@@ -806,32 +785,17 @@ async function setupPeerConnection(reason) {
 
   const iceServers = [];
 
-  // Only include Google STUN server for non-Russian users
-  if (!likelyRussianUser) {
-    iceServers.push({ urls: 'stun:stun.l.google.com:19302' });
-  }
+  iceServers.push({ urls: 'stun:stun.l.google.com:19302' });
   const resp = await fetch('/turn', { cache: 'no-store' });
   /** @type {{iceServers: Array<{urls: string | string[], username?: string, credential?: string}>}} */
   const data = await resp.json();
   data.iceServers.forEach((iceServer) => {
-    if (likelyRussianUser) {
-      const urls = Array.isArray(iceServer.urls) ? iceServer.urls : [iceServer.urls];
-      iceServers.push({
-        ...iceServer,
-        urls: urls.filter((url) => !url.match('transport=udp'))
-      })
-    } else {
-      iceServers.push(iceServer)
-    }
+    iceServers.push(iceServer);
   })
-
-  if (forceRelay && !iceServers.length) {
-    beacon('relay_only_without_turn', { reason });
-  }
 
   const pc = new RTCPeerConnection({
     iceServers,
-    iceTransportPolicy: forceRelay ? 'relay' : 'all',
+    iceTransportPolicy: 'all',
   });
   setStatus('waiting', 'waiting');
   pc.ontrack = (e) => {
