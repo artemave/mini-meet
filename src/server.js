@@ -23,7 +23,7 @@ import meetingView from './views/meeting.html.js';
 // Extend Express Request to include log property
 /**
  * @typedef {import('express').Request & { log: LoggerSet }} RequestWithLog
- * @typedef {import('ws').WebSocket & { log: LoggerSet }} WebSocketWithLog
+ * @typedef {import('ws').WebSocket & { log: LoggerSet, isAlive?: boolean }} WebSocketWithLog
  */
 
 // IP extraction helper
@@ -284,8 +284,39 @@ export function createServer() {
   }
 
   const wss = new WebSocketServer({ noServer: true });
+  const wsHeartbeatMs = parseInt(process.env['WS_HEARTBEAT_MS'] || '25000', 10);
+
+  const heartbeatTimer = setInterval(() => {
+    for (const socket of wss.clients) {
+      const client = /** @type {WebSocketWithLog} */ (socket);
+      if (client.readyState !== client.OPEN) continue;
+
+      if (client.isAlive === false) {
+        // @ts-ignore - Using custom log property
+        client.log?.ws?.('heartbeat_timeout_terminate');
+        client.terminate();
+        continue;
+      }
+
+      client.isAlive = false;
+      try {
+        client.ping();
+      } catch (_) {
+        client.terminate();
+      }
+    }
+  }, wsHeartbeatMs);
+  heartbeatTimer.unref();
+  server.on('close', () => clearInterval(heartbeatTimer));
 
   wss.on('connection', (ws, /** @type {import('http').IncomingMessage} */ request) => {
+    // @ts-ignore - Using custom property for heartbeat liveness
+    ws.isAlive = true;
+    ws.on('pong', () => {
+      // @ts-ignore - Using custom property for heartbeat liveness
+      ws.isAlive = true;
+    });
+
     const ip = getClientIp(/** @type {import('express').Request} */ (/** @type {unknown} */ (request)));
     const { searchParams } = new URL(/** @type {string} */ (request.url), 'http://localhost');
     const roomId = searchParams.get('roomId');
