@@ -1,7 +1,13 @@
 import html from 'nanohtml';
 import layout from './layout.html.js';
 
-export default function indexView() {
+/**
+ * @param {{
+ *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
+ *   posthog?: { apiKey?: string, apiHost?: string }
+ * }} [params]
+ */
+export default function indexView(params = {}) {
   const body = html`
     <div
       class="relative flex min-h-screen flex-col bg-slate-950 font-sans text-slate-100"
@@ -56,5 +62,5 @@ export default function indexView() {
     </div>
   `;
 
-  return layout({ title: 'Mini Meet', body });
+  return layout({ title: 'Mini Meet', body, ...params });
 }

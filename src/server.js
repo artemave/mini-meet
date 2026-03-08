@@ -91,6 +91,17 @@ export function createServer() {
   const posthogStaticProxyPath = `${posthogProxyBasePath}/static`;
   const configuredRollbarClientJsUrl = process.env['ROLLBAR_CLIENT_JS_URL'] || process.env['ROLLBAR_PROXY_JS_PATH'] || '/_rb/7c.js';
   const rollbarProxyJsPath = configuredRollbarClientJsUrl.startsWith('/') ? configuredRollbarClientJsUrl : '/_rb/7c.js';
+  const clientTelemetry = {
+    rollbar: {
+      clientAccessToken: process.env['ROLLBAR_CLIENT_ACCESS_TOKEN'] || '',
+      environment: process.env['ROLLBAR_ENVIRONMENT'] || 'production',
+      jsUrl: rollbarProxyJsPath,
+    },
+    posthog: {
+      apiKey: process.env['POSTHOG_API_KEY'] || '',
+      apiHost: posthogProxyBasePath,
+    },
+  };
 
   // Disable all caching
   app.use((_req, res, next) => {
@@ -152,13 +163,13 @@ export function createServer() {
   app.get('/m/:id', (req, res) => {
     const userAgent = req.headers['user-agent'] || '';
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    const html = meetingView({ roomId: req.params.id, isMobile });
+    const html = meetingView({ roomId: req.params.id, isMobile, ...clientTelemetry });
     res.send(String(html));
   });
 
   // Root: simple landing page
   app.get('/', (_req, res) => {
-    const html = indexView();
+    const html = indexView(clientTelemetry);
     res.send(String(html));
   });
 

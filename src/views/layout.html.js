@@ -1,16 +1,22 @@
 import html from 'nanohtml';
+import rollbarSnippet from './rollbar.html.js';
+import posthogSnippet from './posthog.html.js';
 
 /**
  * @param {{
  *   title?: string,
  *   head?: string | any,
- *   body?: string | any
+ *   body?: string | any,
+ *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
+ *   posthog?: { apiKey?: string, apiHost?: string }
  * }} params
  */
 export default function layout({
   title = 'Mini Meet',
   head = '',
   body = '',
+  rollbar = {},
+  posthog = {},
 }) {
   return html`
     <!DOCTYPE html>
@@ -28,6 +34,8 @@ export default function layout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="manifest" href="/manifest.webmanifest" />
+        ${rollbarSnippet(rollbar)}
+        ${posthogSnippet(posthog)}
         <script>
           (function () {
             function send(event, context) {

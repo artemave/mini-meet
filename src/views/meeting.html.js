@@ -2,9 +2,14 @@ import html from 'nanohtml';
 import layout from './layout.html.js';
 
 /**
- * @param {{ roomId: string, isMobile?: boolean }} params
+ * @param {{
+ *   roomId: string,
+ *   isMobile?: boolean,
+ *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
+ *   posthog?: { apiKey?: string, apiHost?: string }
+ * }} params
  */
-export default function meetingView({ roomId, isMobile = false }) {
+export default function meetingView({ roomId, isMobile = false, rollbar = {}, posthog = {} }) {
   const body = html`
     <div
       id="app-root"
@@ -616,5 +621,5 @@ export default function meetingView({ roomId, isMobile = false }) {
     <script id="meeting-app-script" src="/h-73.js"></script>
   `;
 
-  return layout({ title: `Meeting - ${roomId}`, body });
+  return layout({ title: `Meeting - ${roomId}`, body, rollbar, posthog });
 }
