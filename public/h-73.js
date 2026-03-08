@@ -1,8 +1,6 @@
 /**
  * @typedef {Window & { __IS_MOBILE__: boolean }} WindowWithMobile
  */
-(new Image()).src = '/probe/meeting-js-entry';
-
 const IS_MOBILE = (/** @type {WindowWithMobile} */ (/** @type {unknown} */ (window))).__IS_MOBILE__;
 const roomId = /** @type {string} */ (location.pathname.split('/').pop());
 

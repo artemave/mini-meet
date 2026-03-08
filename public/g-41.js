@@ -1,5 +1,3 @@
-(new Image()).src = '/probe/index-js-entry';
-
 const STORAGE_KEY = 'mini-meet:last-room';
 const installHint = /** @type {HTMLElement | null} */ (document.querySelector('[data-install-hint]'));
 const lastMeetingBtn = /** @type {HTMLAnchorElement | null} */ (document.querySelector('[data-last-meeting]'));

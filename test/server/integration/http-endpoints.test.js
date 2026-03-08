@@ -26,9 +26,8 @@ describe('HTTP Endpoints Integration Tests', () => {
       const html = await res.text();
       assert.ok(html.includes('<!DOCTYPE html>'), 'should be HTML');
       assert.ok(html.length > 100, 'should have content');
-      assert.ok(html.includes('client_resource_error'), 'should include resource error probe');
+      assert.ok(html.includes('client_resource_error'), 'should include resource error beaconing');
       assert.ok(html.includes('id="landing-app-script"'), 'should tag landing app script');
-      assert.ok(html.includes("/probe/index-inline"), 'should include inline landing boot probe');
     });
 
     it('should set no-cache headers', async () => {
@@ -67,7 +66,6 @@ describe('HTTP Endpoints Integration Tests', () => {
       assert.ok(html.includes('<!DOCTYPE html>'), 'should be HTML');
       assert.ok(html.includes('test123'), 'should include room ID in page');
       assert.ok(html.includes('id="meeting-app-script"'), 'should tag meeting app script');
-      assert.ok(html.includes("/probe/meeting-inline"), 'should include inline meeting boot probe');
     });
 
     it('should detect mobile user-agent', async () => {
@@ -204,13 +202,6 @@ describe('HTTP Endpoints Integration Tests', () => {
     });
   });
 
-  describe('GET /probe/:stage', () => {
-    it('should accept early boot probes', async () => {
-      const res = await fetch(baseUrl + '/probe/meeting-inline');
-      assert.strictEqual(res.status, 204);
-    });
-  });
-
   describe('Static files', () => {
     it('should serve files from public directory', async () => {
       // Assuming there's a robots.txt or similar static file
@@ -225,15 +216,15 @@ describe('HTTP Endpoints Integration Tests', () => {
 
       const js = await res.text();
       assert.ok(js.includes("iceTransportPolicy: 'all'"), 'should use all ICE candidates');
-      assert.ok(js.includes("/probe/meeting-js-entry"), 'should probe when meeting script starts executing');
+      assert.ok(js.includes("new WebSocket(`${wsProtocol}://${location.host}/ws?roomId=${encodeURIComponent(roomId)}`)"), 'should connect signaling websocket');
     });
 
-    it('should probe when landing script starts executing', async () => {
+    it('should include landing app logic', async () => {
       const res = await fetch(baseUrl + '/g-41.js');
       assert.strictEqual(res.status, 200);
 
       const js = await res.text();
-      assert.ok(js.includes("/probe/index-js-entry"), 'should probe when index.js starts executing');
+      assert.ok(js.includes("const STORAGE_KEY = 'mini-meet:last-room';"), 'should include landing script logic');
     });
   });
 });

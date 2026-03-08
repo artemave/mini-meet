@@ -16,7 +16,7 @@ import meetingView from './views/meeting.html.js';
  * @typedef {{
  *   http: (msg: string) => void,
  *   turn: (msg: string) => void,
- *   beacon: (msg: string) => void,
+ *   beacon: (msg: string) => void
  * }} LoggerSet
  */
 
@@ -196,11 +196,6 @@ export function createServer() {
     // @ts-ignore - Using custom log property
     req.log.beacon(`event=${event} ${contextStr}`.trim());
 
-    res.status(204).end();
-  });
-
-  // Tiny GET probe endpoint for very early client boot diagnostics.
-  app.get('/probe/:stage', (_req, res) => {
     res.status(204).end();
   });
 

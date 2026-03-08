@@ -4,9 +4,7 @@ import html from 'nanohtml';
  * @param {{
  *   title?: string,
  *   head?: string | any,
- *   body?: string | any,
- *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
- *   posthog?: { apiKey?: string, apiHost?: string }
+ *   body?: string | any
  * }} params
  */
 export default function layout({
