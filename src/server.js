@@ -161,8 +161,9 @@ export function createServer() {
 
   // Serve meeting page
   app.get('/m/:id', (req, res) => {
-    const userAgent = req.headers['user-agent'] || '';
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isMobile = isMobileRequest(req);
+    res.vary('User-Agent');
+    res.vary('Sec-CH-UA-Mobile');
     const html = meetingView({ roomId: req.params.id, isMobile, ...clientTelemetry });
     res.send(String(html));
   });
@@ -431,3 +432,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`Server listening on ${proto}://localhost:${PORT}`);
   });
 }
+  /**
+   * @param {import('express').Request} req
+   */
+  function isMobileRequest(req) {
+    const userAgent = String(req.headers['user-agent'] || '');
+    const chMobileRaw = req.headers['sec-ch-ua-mobile'];
+    const chMobile = Array.isArray(chMobileRaw) ? chMobileRaw[0] : chMobileRaw;
+    if (chMobile === '?1') return true;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|\bMobile\b/i.test(userAgent);
+  }

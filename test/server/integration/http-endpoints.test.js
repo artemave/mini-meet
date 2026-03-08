@@ -87,6 +87,26 @@ describe('HTTP Endpoints Integration Tests', () => {
       const html = await res.text();
       assert.ok(html.includes('__IS_MOBILE__ = false'), 'should not set mobile flag');
     });
+
+    it('should detect mobile from sec-ch-ua-mobile hint', async () => {
+      const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+      const res = await fetch(baseUrl + '/m/test123', {
+        headers: {
+          'User-Agent': desktopUA,
+          'sec-ch-ua-mobile': '?1'
+        }
+      });
+
+      const html = await res.text();
+      assert.ok(html.includes('__IS_MOBILE__ = true'), 'should set mobile flag from client hint');
+    });
+
+    it('should vary meeting HTML by user-agent hints', async () => {
+      const res = await fetch(baseUrl + '/m/test123');
+      const vary = res.headers.get('vary') || '';
+      assert.ok(vary.includes('User-Agent'), 'should vary by user-agent');
+      assert.ok(vary.includes('Sec-CH-UA-Mobile'), 'should vary by sec-ch-ua-mobile');
+    });
   });
 
   describe('GET /turn', () => {
