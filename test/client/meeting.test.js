@@ -95,8 +95,8 @@ describe('Meeting Page Client Tests', () => {
       });
       await page.goto(`${baseUrl}/m/instagram-test`);
 
-      await expect(page.getByText('Browser Not Supported')).toBeVisible();
-      await expect(page.getByText(/open this link in your default browser/i)).toBeVisible();
+      await expect(page.getByText('Open in Your Browser')).toBeVisible();
+      await expect(page.getByText(/video calls don't work in/i)).toBeVisible();
     });
   });
 

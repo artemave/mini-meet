@@ -403,11 +403,16 @@ export default function meetingView({ roomId, isMobile = false, posthog = {} }) 
             </div>
           </div>
           <h3 id="modal-title" class="mb-2 text-center text-lg font-semibold text-slate-100">
-            Browser Not Supported
+            Open in Your Browser
           </h3>
-          <p id="modal-message" class="mb-6 text-center text-sm text-slate-300">
-            Video calls don't work in <span id="browser-name" class="font-semibold">this app</span>'s built-in browser. Please open this link in your default browser (Safari, Chrome, Firefox, etc.).
-          </p>
+          <div class="mb-6">
+            <p id="modal-message" class="text-center text-sm text-slate-300">
+              Video calls don't work in <span id="browser-name" class="font-semibold">this app</span>'s built-in browser.
+            </p>
+            <p id="modal-hint" class="mt-2 text-center text-sm text-slate-400 hidden">
+              Tap <strong class="text-slate-200 font-semibold">Open in Safari</strong> in the toolbar below.
+            </p>
+          </div>
           <div class="flex flex-col gap-3">
             <button
               id="modal-share-link"

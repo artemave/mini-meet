@@ -36,6 +36,7 @@ const remotePlayButtonOverlay = /** @type {HTMLElement} */ (document.getElementB
 const unsupportedBrowserModal = /** @type {HTMLElement} */ (document.getElementById('unsupported-browser-modal'));
 const modalShareLinkBtn = /** @type {HTMLElement} */ (document.getElementById('modal-share-link'));
 const modalBrowserName = /** @type {HTMLElement} */ (document.getElementById('browser-name'));
+const modalHint = /** @type {HTMLElement | null} */ (document.getElementById('modal-hint'));
 const mobileHeader = /** @type {HTMLElement | null} */ (document.getElementById('mobile-header'));
 const mobileStatusColumn = /** @type {HTMLElement | null} */ (document.getElementById('mobile-status-column'));
 const mobileButtonsColumn = /** @type {HTMLElement | null} */ (document.getElementById('mobile-buttons-column'));
@@ -146,10 +147,13 @@ function detectUnsupportedBrowser() {
   // Check if getUserMedia is available
   const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
   // Return detection result
   return {
     isUnsupported: isKnownInAppBrowser || !hasGetUserMedia,
     reason: isKnownInAppBrowser ? 'in-app-browser' : (!hasGetUserMedia ? 'no-webrtc' : null),
+    isIOS,
     browserName: isTelegramWebview ? 'Telegram' :
                  isInstagramWebview ? 'Instagram' :
                  isFacebookWebview ? 'Facebook' :
@@ -216,10 +220,14 @@ async function shareMeetingLink() {
 
 /**
  * @param {string} browserName
+ * @param {boolean} isIOS
  */
-function showUnsupportedBrowserModal(browserName) {
+function showUnsupportedBrowserModal(browserName, isIOS) {
   if (browserName) {
     modalBrowserName.textContent = browserName;
+  }
+  if (isIOS && modalHint) {
+    modalHint.classList.remove('hidden');
   }
   unsupportedBrowserModal.classList.remove('hidden');
 }
@@ -1183,7 +1191,7 @@ function bootstrapMeeting() {
   // Check for unsupported browser
   const browserCheck = detectUnsupportedBrowser();
   if (browserCheck.isUnsupported) {
-    showUnsupportedBrowserModal(browserCheck.browserName);
+    showUnsupportedBrowserModal(browserCheck.browserName, browserCheck.isIOS);
   }
 
   modalShareLinkBtn.addEventListener('click', shareMeetingLink);
