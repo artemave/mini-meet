@@ -91,7 +91,7 @@ describe('Meeting Page Client Tests', () => {
 
     it('should warn users about unsupported browsers', async () => {
       page = await createPage({
-        userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) Instagram'
+        userAgent: 'Mozilla/5.0 (Linux; Android 10; Pixel 3) Instagram'
       });
       await page.goto(`${baseUrl}/m/instagram-test`);
 
