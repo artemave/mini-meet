@@ -6,7 +6,6 @@ import url from 'url';
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import crypto from 'crypto';
-import Rollbar from 'rollbar';
 import debug from 'debug';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import indexView from './views/index.html.js';
@@ -77,26 +76,12 @@ export function createServer() {
 
   const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
-  const rollbar = new Rollbar({
-    // @ts-ignore - Rollbar types don't properly support exactOptionalPropertyTypes
-    accessToken: process.env['ROLLBAR_SERVER_ACCESS_TOKEN'] || undefined,
-    captureUncaught: true,
-    captureUnhandledRejections: true,
-    environment: process.env['ROLLBAR_ENVIRONMENT'] || 'development',
-  });
   const configuredPosthogApiHost = process.env['POSTHOG_API_HOST'] || '';
   const posthogProxyBasePath = configuredPosthogApiHost.startsWith('/')
     ? configuredPosthogApiHost
     : process.env['POSTHOG_PROXY_BASE_PATH'] || '/_px/9v';
   const posthogStaticProxyPath = `${posthogProxyBasePath}/static`;
-  const configuredRollbarClientJsUrl = process.env['ROLLBAR_CLIENT_JS_URL'] || process.env['ROLLBAR_PROXY_JS_PATH'] || '/_rb/7c.js';
-  const rollbarProxyJsPath = configuredRollbarClientJsUrl.startsWith('/') ? configuredRollbarClientJsUrl : '/_rb/7c.js';
   const clientTelemetry = {
-    rollbar: {
-      clientAccessToken: process.env['ROLLBAR_CLIENT_ACCESS_TOKEN'] || '',
-      environment: process.env['ROLLBAR_ENVIRONMENT'] || 'production',
-      jsUrl: rollbarProxyJsPath,
-    },
     posthog: {
       apiKey: process.env['POSTHOG_API_KEY'] || '',
       apiHost: posthogProxyBasePath,
@@ -145,13 +130,6 @@ export function createServer() {
   // Static files
   const publicDir = path.join(__dirname, '..', 'public');
   app.use(express.static(publicDir));
-
-  // Proxy Rollbar through the app so clients do not hit the CDN directly.
-  app.use(rollbarProxyJsPath, createProxyMiddleware({
-    target: 'https://cdn.rollbar.com',
-    changeOrigin: true,
-    pathRewrite: () => '/rollbarjs/refs/tags/v2.26.4/rollbar.min.js',
-  }));
 
   // Create new meeting and redirect to unique URL
   app.get('/new', (_req, res) => {
@@ -259,8 +237,6 @@ export function createServer() {
     console.error(err);
     next(err);
   });
-
-  app.use(rollbar.errorHandler());
 
   // In-memory room registry: roomId -> Set of ws
   /** @type {Map<string, Set<import('ws').WebSocket>>} */

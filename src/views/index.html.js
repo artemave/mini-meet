@@ -3,7 +3,6 @@ import layout from './layout.html.js';
 
 /**
  * @param {{
- *   rollbar?: { clientAccessToken?: string, environment?: string, jsUrl?: string },
  *   posthog?: { apiKey?: string, apiHost?: string }
  * }} [params]
  */

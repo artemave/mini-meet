@@ -21,7 +21,6 @@
     "express": "^4.19.2",
     "http-proxy-middleware": "^3.0.5",
     "nanohtml": "^1.10.0",
-    "rollbar": "^2.26.4",
     "tailwindcss": "^4.1.13",
     "ws": "^8.18.0"
   },
